@@ -1,7 +1,8 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react-swc'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react-swc';
 
-// https://vite.dev/config/
+// Replace 'your-repo-name' with the actual repository name
 export default defineConfig({
   plugins: [react()],
-})
+  base: '/quotes/',  // ✅ Important for GitHub Pages
+});
