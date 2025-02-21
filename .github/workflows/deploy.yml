@@ -1,34 +1,38 @@
-name: Deploy Vite App to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
     branches:
-      - main  # Change if your default branch is different
+      - main  # Change to your branch name if needed
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  build-deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: 'npm'
+          cache: npm
+          cache-dependency-path: QuotesManager/package-lock.json  # Adjust this path!
 
       - name: Install dependencies
         run: npm install
+        working-directory: QuotesManager  # 👈 Set your project folder here!
 
-      - name: Build project
+      - name: Build the project
         run: npm run build
+        working-directory: QuotesManager  # 👈 Again, set the working directory
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          branch: gh-pages  # Deploy to this branch
-          folder: dist  # GitHub Pages serves from the "dist" folder
+          branch: gh-pages
+          folder: QuotesManager/dist  # 👈 Adjust to where Vite outputs build files
