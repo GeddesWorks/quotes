@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main  # Change to your branch name if needed
+      - main # Change to your branch name if needed
 
 permissions:
   contents: write
@@ -21,18 +21,21 @@ jobs:
         with:
           node-version: 18
           cache: npm
-          cache-dependency-path: QuotesManager/package-lock.json  # Adjust this path!
+          cache-dependency-path: QuotesManager/package-lock.json # Adjust this path!
 
       - name: Install dependencies
         run: npm install
-        working-directory: QuotesManager  # 👈 Set your project folder here!
+        working-directory: QuotesManager # 👈 Set your project folder here!
 
       - name: Build the project
         run: npm run build
-        working-directory: QuotesManager  # 👈 Again, set the working directory
+        working-directory: QuotesManager # 👈 Again, set the working directory
+
+      - name: Fix GitHub Pages MIME Type Issue
+        run: touch QuotesManager/dist/.nojekyll
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
-          folder: QuotesManager/dist  # 👈 Adjust to where Vite outputs build files
+          folder: QuotesManager/dist # 👈 Adjust to where Vite outputs build files
