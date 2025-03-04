@@ -43,16 +43,19 @@ const MultiViewPage = () => {
         const newDailyQuotes: { [key: string]: string } = {};
         users.forEach((user) => {
             if (user.quotes.length > 0) {
+                console.log(user.name);
                 const randomQuote = user.quotes[Math.floor(Math.random() * user.quotes.length)];
                 newDailyQuotes[user.name] = randomQuote;
             }
         });
 
-        // Store new daily quotes in Firestore
-        await setDoc(dailyDocRef, {
-            lastUpdated: today,
-            quotes: newDailyQuotes,
-        });
+        if (users.length > 0) {
+            // Store new daily quotes in Firestore
+            await setDoc(dailyDocRef, {
+                lastUpdated: today,
+                quotes: newDailyQuotes,
+            });
+        }
 
         setDailyQuotes(newDailyQuotes);
     };
