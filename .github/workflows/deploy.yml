@@ -30,6 +30,17 @@ jobs:
       - name: Build the project
         run: npm run build
         working-directory: QuotesManager # 👈 Again, set the working directory
+        env:
+          VITE_APPWRITE_ENDPOINT: https://sfo.cloud.appwrite.io/v1
+          VITE_APPWRITE_PROJECT_ID: 69876eae003275d80ff8
+          VITE_APPWRITE_PERMISSION_MODE: strict
+          VITE_APPWRITE_FUNCTION_ID: qm_api
+          VITE_APPWRITE_DATABASE_ID: ${{ vars.VITE_APPWRITE_DATABASE_ID }}
+          VITE_APPWRITE_COLLECTION_GROUPS_ID: ${{ vars.VITE_APPWRITE_COLLECTION_GROUPS_ID }}
+          VITE_APPWRITE_COLLECTION_MEMBERSHIPS_ID: ${{ vars.VITE_APPWRITE_COLLECTION_MEMBERSHIPS_ID }}
+          VITE_APPWRITE_COLLECTION_PEOPLE_ID: ${{ vars.VITE_APPWRITE_COLLECTION_PEOPLE_ID }}
+          VITE_APPWRITE_COLLECTION_QUOTES_ID: ${{ vars.VITE_APPWRITE_COLLECTION_QUOTES_ID }}
+          VITE_APPWRITE_COLLECTION_INVITES_ID: ${{ vars.VITE_APPWRITE_COLLECTION_INVITES_ID }}
 
       - name: Fix GitHub Pages MIME Type Issue
         run: touch QuotesManager/dist/.nojekyll
