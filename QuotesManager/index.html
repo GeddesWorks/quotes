@@ -11,6 +11,23 @@
     rel="stylesheet"
   />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    (() => {
+      try {
+        const stored = localStorage.getItem("qm_theme_preference");
+        const preference = stored === "light" || stored === "dark" || stored === "system"
+          ? stored
+          : "system";
+        const prefersDark = window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const resolved = preference === "system" ? (prefersDark ? "dark" : "light") : preference;
+        document.documentElement.dataset.theme = resolved;
+        document.documentElement.style.colorScheme = resolved;
+      } catch {
+        // ignore
+      }
+    })();
+  </script>
   <title>Quotes Manager</title>
 </head>
 
