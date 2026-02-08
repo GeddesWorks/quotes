@@ -1,28 +1,82 @@
-#root {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  padding: 2rem;
-  flex-direction: column;
-  /* Allows stacking on smaller screens */
+:root {
+  color-scheme: light;
+  --bg-base: #f7f3eb;
+  --text-base: #1c1b19;
+  --glow-1: rgba(27, 94, 75, 0.15);
+  --glow-2: rgba(192, 92, 61, 0.18);
+  --wash-1: rgba(255, 255, 255, 0.72);
+  --wash-2: rgba(247, 243, 235, 0.6);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-base: #121413;
+  --text-base: #f4f1eb;
+  --glow-1: rgba(51, 146, 118, 0.35);
+  --glow-2: rgba(240, 156, 124, 0.25);
+  --wash-1: rgba(16, 18, 17, 0.92);
+  --wash-2: rgba(8, 9, 9, 0.85);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #242424;
-  color: rgba(255, 255, 255, 0.87);
+  background-color: var(--bg-base);
+  color: var(--text-base);
+  font-family: "Archivo", "Segoe UI", sans-serif;
+  position: relative;
 }
 
-h1 {
-  font-size: 2.5rem;
-  line-height: 1.1;
-  margin-bottom: 1.5rem;
-  /* Adds spacing below the header */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 12% 18%, var(--glow-1), transparent 45%),
+    radial-gradient(circle at 90% 12%, var(--glow-2), transparent 40%),
+    linear-gradient(120deg, var(--wash-1), var(--wash-2));
+  z-index: -1;
+  pointer-events: none;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+.page {
+  animation: rise 520ms ease;
+}
+
+.stagger {
+  animation: fade-in 420ms ease both;
+}
+
+@keyframes rise {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

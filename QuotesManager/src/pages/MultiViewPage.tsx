@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { collection, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../util/firestore.ts";
 import QuoteCard from "../components/QuoteCard.tsx";
@@ -26,7 +26,7 @@ const MultiViewPage = () => {
     }, []);
 
     // Function to check and update daily quotes
-    const updateDailyQuotes = async () => {
+    const updateDailyQuotes = useCallback(async () => {
         const dailyDocRef = doc(db, "meta", "dailyQuotes");
         const dailyDocSnap = await getDoc(dailyDocRef);
         const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
@@ -43,7 +43,6 @@ const MultiViewPage = () => {
         const newDailyQuotes: { [key: string]: string } = {};
         users.forEach((user) => {
             if (user.quotes.length > 0) {
-                console.log(user.name);
                 const randomQuote = user.quotes[Math.floor(Math.random() * user.quotes.length)];
                 newDailyQuotes[user.name] = randomQuote;
             }
@@ -58,17 +57,17 @@ const MultiViewPage = () => {
         }
 
         setDailyQuotes(newDailyQuotes);
-    };
+    }, [users]);
 
     useEffect(() => {
-        updateDailyQuotes(); // Run on mount
+        void updateDailyQuotes(); // Run on mount
 
         const interval = setInterval(() => {
-            updateDailyQuotes();
+            void updateDailyQuotes();
         }, 2 * 60 * 60 * 1000); // Every 2 hours
 
         return () => clearInterval(interval);
-    }, [users]);
+    }, [updateDailyQuotes]);
 
     return (
         <Box display="flex" flexDirection="column" alignItems="center" minHeight="100vh" p={3} width="100%">

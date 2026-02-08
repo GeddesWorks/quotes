@@ -1,36 +1,51 @@
-import { Card, CardContent, Typography } from "@mui/material";
-import capitalize from "capitalize";
+﻿import { Button, Card, CardActions, CardContent, Stack, Typography } from "@mui/material";
+import { alpha, useTheme } from "@mui/material/styles";
 
 interface QuoteCardProps {
     text: string;
     author: string;
+    addedBy?: string;
+    canDelete?: boolean;
+    onDelete?: () => void;
 }
 
-const QuoteCard: React.FC<QuoteCardProps> = ({ text, author }) => {
+const QuoteCard: React.FC<QuoteCardProps> = ({ text, author, addedBy, canDelete, onDelete }) => {
+    const theme = useTheme();
     return (
         <Card
             sx={{
-                width: "100%",   // Ensures it takes the full width of the parent container
-                maxWidth: "100%", // Prevents unnecessary restriction
-                margin: "auto",
-                padding: 2,
-                textAlign: "center",
-                backgroundColor: "#4444",
-                boxShadow: 3,
-                borderRadius: 0
+                width: "100%",
+                backgroundColor: alpha(theme.palette.background.paper, 0.92),
+                backdropFilter: "blur(4px)"
             }}
         >
             <CardContent>
-                <Typography variant="h6" gutterBottom color="#fffd">
-                    "{capitalize(text)}"
-                </Typography>
-                <Typography variant="subtitle1" color="#fffa">
-                    - {author}
-                </Typography>
+                <Stack spacing={1.5}>
+                    <Typography variant="h6" sx={{ lineHeight: 1.5 }}>
+                        "{text}"
+                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                            {author}
+                        </Typography>
+                        {addedBy && (
+                            <Typography variant="body2" color="text.secondary">
+                                added by {addedBy}
+                            </Typography>
+                        )}
+                    </Stack>
+                </Stack>
             </CardContent>
+            {canDelete && (
+                <CardActions sx={{ justifyContent: "flex-end", paddingX: 2, paddingBottom: 2 }}>
+                    <Button variant="outlined" color="secondary" onClick={onDelete}>
+                        Remove
+                    </Button>
+                </CardActions>
+            )}
         </Card>
-
     );
 };
 
 export default QuoteCard;
+
