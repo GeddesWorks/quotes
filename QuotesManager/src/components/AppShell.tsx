@@ -8,17 +8,25 @@ import {
     DialogTitle,
     Divider,
     FormControl,
+    IconButton,
     InputLabel,
+    List,
+    ListItemButton,
+    ListItemText,
+    Drawer,
     MenuItem,
     Select,
     Stack,
     Toolbar,
     TextField,
-    Typography
+    Typography,
+    useMediaQuery
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useState } from "react";
 import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
+import CloseIcon from "@mui/icons-material/Close";
+import MenuIcon from "@mui/icons-material/Menu";
 import { useAuth } from "../contexts/AuthContext";
 import { useGroups } from "../contexts/GroupContext";
 import { useThemeMode } from "../contexts/ThemeModeContext";
@@ -37,6 +45,7 @@ const AppShell = () => {
     const [joinError, setJoinError] = useState<string | null>(null);
     const [joining, setJoining] = useState(false);
     const [installOpen, setInstallOpen] = useState(false);
+    const [navOpen, setNavOpen] = useState(false);
     const isAdmin = activeMembership?.role === "owner" || activeMembership?.role === "admin";
     const onAdminRoute = location.pathname.startsWith("/admin");
     const adminLabel = isAdmin ? "Admin" : "Settings";
@@ -48,6 +57,8 @@ const AppShell = () => {
             (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
     const isAndroid = /Android/i.test(ua);
     const isMobile = isIOS || isAndroid || /Mobi/i.test(ua);
+    const isCompactNav = useMediaQuery(theme.breakpoints.down("md"));
+    const activeGroupName = groups.find((group) => group.$id === activeGroupId)?.name ?? "No group";
 
     const handleJoinGroup = async () => {
         if (!user) {
@@ -87,81 +98,243 @@ const AppShell = () => {
                     borderBottom: `1px solid ${alpha(theme.palette.text.primary, 0.08)}`
                 }}
             >
-                <Toolbar sx={{ gap: 3, flexWrap: "wrap" }}>
-                    <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
-                        <Typography variant="h6" sx={{ fontWeight: 700, color: "text.primary" }}>
-                            Quotes Manager
-                        </Typography>
-                        <Stack direction="row" spacing={1}>
-                            <Button
-                                component={RouterLink}
-                                to="/"
-                                variant={onAdminRoute ? "text" : "contained"}
+                <Toolbar sx={{ gap: { xs: 1.5, md: 3 }, flexWrap: { xs: "nowrap", md: "wrap" } }}>
+                    {isCompactNav ? (
+                        <>
+                            <IconButton
+                                edge="start"
+                                color="inherit"
+                                aria-label="Open navigation menu"
+                                onClick={() => setNavOpen(true)}
                             >
-                                View
-                            </Button>
-                            <Button
-                                component={RouterLink}
-                                to="/admin"
-                                variant={onAdminRoute ? "contained" : "text"}
-                            >
-                                {adminLabel}
-                            </Button>
-                        </Stack>
-                        <FormControl size="small" sx={{ minWidth: 220 }} disabled={!user}>
-                            <InputLabel id="group-select">Group</InputLabel>
-                            <Select
-                                labelId="group-select"
-                                value={activeGroupId ?? ""}
-                                label="Group"
-                                onChange={(event) => {
-                                    const next = String(event.target.value);
-                                    if (next === joinOptionValue) {
-                                        setJoinError(null);
-                                        setJoinCode("");
-                                        setJoinOpen(true);
-                                        return;
-                                    }
-                                    if (next) {
-                                        setActiveGroupId(next);
-                                    }
+                                <MenuIcon />
+                            </IconButton>
+                            <Box
+                                sx={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    display: "flex",
+                                    alignItems: "baseline",
+                                    flexWrap: "wrap",
+                                    columnGap: 1,
+                                    rowGap: 0.5
                                 }}
                             >
-                                {groups.map((group) => (
-                                    <MenuItem key={group.$id} value={group.$id}>
-                                        {group.name}
-                                    </MenuItem>
-                                ))}
-                                <Divider />
-                                <MenuItem value={joinOptionValue}>Join group...</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <Button variant="outlined" onClick={() => setCreateOpen(true)}>
+                                <Typography
+                                    variant="h6"
+                                    sx={{ fontWeight: 700, color: "text.primary", whiteSpace: "nowrap" }}
+                                >
+                                    Quotes Manager
+                                </Typography>
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    sx={{ marginLeft: "auto", textAlign: "right", fontWeight: 600 }}
+                                >
+                                    {activeGroupName}
+                                </Typography>
+                            </Box>
+                        </>
+                    ) : (
+                        <>
+                            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+                                <Typography variant="h6" sx={{ fontWeight: 700, color: "text.primary" }}>
+                                    Quotes Manager
+                                </Typography>
+                                <Stack direction="row" spacing={1}>
+                                    <Button
+                                        component={RouterLink}
+                                        to="/"
+                                        variant={onAdminRoute ? "text" : "contained"}
+                                    >
+                                        View
+                                    </Button>
+                                    <Button
+                                        component={RouterLink}
+                                        to="/admin"
+                                        variant={onAdminRoute ? "contained" : "text"}
+                                    >
+                                        {adminLabel}
+                                    </Button>
+                                </Stack>
+                                <FormControl size="small" sx={{ minWidth: 220 }} disabled={!user}>
+                                    <InputLabel id="group-select">Group</InputLabel>
+                                    <Select
+                                        labelId="group-select"
+                                        value={activeGroupId ?? ""}
+                                        label="Group"
+                                        onChange={(event) => {
+                                            const next = String(event.target.value);
+                                            if (next === joinOptionValue) {
+                                                setJoinError(null);
+                                                setJoinCode("");
+                                                setJoinOpen(true);
+                                                return;
+                                            }
+                                            if (next) {
+                                                setActiveGroupId(next);
+                                            }
+                                        }}
+                                    >
+                                        {groups.map((group) => (
+                                            <MenuItem key={group.$id} value={group.$id}>
+                                                {group.name}
+                                            </MenuItem>
+                                        ))}
+                                        <Divider />
+                                        <MenuItem value={joinOptionValue}>Join group...</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                <Button variant="outlined" onClick={() => setCreateOpen(true)}>
+                                    Create group
+                                </Button>
+                            </Stack>
+                            <Box flexGrow={1} />
+                            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+                                <FormControl size="small" sx={{ minWidth: 140 }}>
+                                    <InputLabel id="theme-select">Theme</InputLabel>
+                                    <Select
+                                        labelId="theme-select"
+                                        value={preference}
+                                        label="Theme"
+                                        onChange={(event) =>
+                                            setPreference(
+                                                event.target.value as "system" | "light" | "dark"
+                                            )
+                                        }
+                                    >
+                                        <MenuItem value="system">System</MenuItem>
+                                        <MenuItem value="light">Light</MenuItem>
+                                        <MenuItem value="dark">Dark</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                {isMobile && (
+                                    <Button variant="outlined" onClick={() => setInstallOpen(true)}>
+                                        Add as app
+                                    </Button>
+                                )}
+                                <Typography variant="body2" color="text.secondary">
+                                    {user?.name || user?.email}
+                                </Typography>
+                                <Button color="secondary" variant="contained" onClick={signOut}>
+                                    Sign out
+                                </Button>
+                            </Stack>
+                        </>
+                    )}
+                </Toolbar>
+            </AppBar>
+            <Box component="main" sx={{ flex: 1, px: { xs: 2, md: 6 }, py: 4 }}>
+                <Outlet />
+            </Box>
+            <Drawer
+                anchor="left"
+                open={navOpen}
+                onClose={() => setNavOpen(false)}
+                PaperProps={{ sx: { width: { xs: "82vw", sm: 360 } } }}
+            >
+                <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between">
+                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                            Menu
+                        </Typography>
+                        <IconButton aria-label="Close navigation menu" onClick={() => setNavOpen(false)}>
+                            <CloseIcon />
+                        </IconButton>
+                    </Stack>
+                    <List disablePadding>
+                        <ListItemButton
+                            component={RouterLink}
+                            to="/"
+                            selected={!onAdminRoute}
+                            onClick={() => setNavOpen(false)}
+                        >
+                            <ListItemText primary="View" />
+                        </ListItemButton>
+                        <ListItemButton
+                            component={RouterLink}
+                            to="/admin"
+                            selected={onAdminRoute}
+                            onClick={() => setNavOpen(false)}
+                        >
+                            <ListItemText primary={adminLabel} />
+                        </ListItemButton>
+                    </List>
+                    <Divider />
+                    <FormControl size="small" disabled={!user} fullWidth>
+                        <InputLabel id="group-select-drawer">Group</InputLabel>
+                        <Select
+                            labelId="group-select-drawer"
+                            value={activeGroupId ?? ""}
+                            label="Group"
+                            onChange={(event) => {
+                                const next = String(event.target.value);
+                                if (next === joinOptionValue) {
+                                    setJoinError(null);
+                                    setJoinCode("");
+                                    setJoinOpen(true);
+                                    return;
+                                }
+                                if (next) {
+                                    setActiveGroupId(next);
+                                    setNavOpen(false);
+                                }
+                            }}
+                        >
+                            {groups.map((group) => (
+                                <MenuItem key={group.$id} value={group.$id}>
+                                    {group.name}
+                                </MenuItem>
+                            ))}
+                            <Divider />
+                            <MenuItem value={joinOptionValue}>Join group...</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <Stack spacing={1.5}>
+                        <Button
+                            variant="outlined"
+                            onClick={() => {
+                                setCreateOpen(true);
+                                setNavOpen(false);
+                            }}
+                        >
                             Create group
                         </Button>
+                        <Button
+                            variant="text"
+                            onClick={() => {
+                                setJoinError(null);
+                                setJoinCode("");
+                                setJoinOpen(true);
+                                setNavOpen(false);
+                            }}
+                        >
+                            Join group
+                        </Button>
                     </Stack>
-                    <Box flexGrow={1} />
-                    <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
-                        <FormControl size="small" sx={{ minWidth: 140 }}>
-                            <InputLabel id="theme-select">Theme</InputLabel>
-                            <Select
-                                labelId="theme-select"
-                                value={preference}
-                                label="Theme"
-                                onChange={(event) =>
-                                    setPreference(event.target.value as "system" | "light" | "dark")
-                                }
-                            >
-                                <MenuItem value="system">System</MenuItem>
-                                <MenuItem value="light">Light</MenuItem>
-                                <MenuItem value="dark">Dark</MenuItem>
-                            </Select>
-                        </FormControl>
-                        {isMobile && (
-                            <Button variant="outlined" onClick={() => setInstallOpen(true)}>
-                                Add as app
-                            </Button>
-                        )}
+                    <Divider />
+                    <FormControl size="small" fullWidth>
+                        <InputLabel id="theme-select-drawer">Theme</InputLabel>
+                        <Select
+                            labelId="theme-select-drawer"
+                            value={preference}
+                            label="Theme"
+                            onChange={(event) =>
+                                setPreference(event.target.value as "system" | "light" | "dark")
+                            }
+                        >
+                            <MenuItem value="system">System</MenuItem>
+                            <MenuItem value="light">Light</MenuItem>
+                            <MenuItem value="dark">Dark</MenuItem>
+                        </Select>
+                    </FormControl>
+                    {isMobile && (
+                        <Button variant="outlined" onClick={() => setInstallOpen(true)}>
+                            Add as app
+                        </Button>
+                    )}
+                    <Divider />
+                    <Stack spacing={1}>
                         <Typography variant="body2" color="text.secondary">
                             {user?.name || user?.email}
                         </Typography>
@@ -169,11 +342,8 @@ const AppShell = () => {
                             Sign out
                         </Button>
                     </Stack>
-                </Toolbar>
-            </AppBar>
-            <Box component="main" sx={{ flex: 1, px: { xs: 2, md: 6 }, py: 4 }}>
-                <Outlet />
-            </Box>
+                </Box>
+            </Drawer>
             <CreateGroupDialog
                 open={createOpen}
                 onClose={() => setCreateOpen(false)}
