@@ -1,4 +1,4 @@
-﻿import { Button, Card, CardActions, CardContent, Stack, Typography } from "@mui/material";
+import { Box, Button, Card, CardActions, CardContent, Stack, Typography } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 
 interface QuoteCardProps {
@@ -7,17 +7,30 @@ interface QuoteCardProps {
     addedBy?: string;
     canDelete?: boolean;
     onDelete?: () => void;
+    actions?: React.ReactNode;
+    onSelect?: () => void;
 }
 
-const QuoteCard: React.FC<QuoteCardProps> = ({ text, author, addedBy, canDelete, onDelete }) => {
+const QuoteCard: React.FC<QuoteCardProps> = ({
+    text,
+    author,
+    addedBy,
+    canDelete,
+    onDelete,
+    actions,
+    onSelect
+}) => {
     const theme = useTheme();
+    const hasActions = Boolean(canDelete || actions);
     return (
         <Card
             sx={{
                 width: "100%",
                 backgroundColor: alpha(theme.palette.background.paper, 0.92),
-                backdropFilter: "blur(4px)"
+                backdropFilter: "blur(4px)",
+                cursor: onSelect ? "pointer" : "default"
             }}
+            onClick={onSelect}
         >
             <CardContent>
                 <Stack spacing={1.5}>
@@ -36,11 +49,23 @@ const QuoteCard: React.FC<QuoteCardProps> = ({ text, author, addedBy, canDelete,
                     </Stack>
                 </Stack>
             </CardContent>
-            {canDelete && (
+            {hasActions && (
                 <CardActions sx={{ justifyContent: "flex-end", paddingX: 2, paddingBottom: 2 }}>
-                    <Button variant="outlined" color="secondary" onClick={onDelete}>
-                        Remove
-                    </Button>
+                    <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                        {actions}
+                        {canDelete && (
+                            <Button
+                                variant="outlined"
+                                color="secondary"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    onDelete?.();
+                                }}
+                            >
+                                Remove
+                            </Button>
+                        )}
+                    </Box>
                 </CardActions>
             )}
         </Card>
@@ -48,4 +73,3 @@ const QuoteCard: React.FC<QuoteCardProps> = ({ text, author, addedBy, canDelete,
 };
 
 export default QuoteCard;
-

@@ -6,6 +6,7 @@ export interface GroupDoc extends Models.Document {
     name: string;
     ownerId: string;
     createdAt: string;
+    spellingAllowList?: string[];
 }
 
 export interface MembershipDoc extends Models.Document {
@@ -37,6 +38,9 @@ export interface QuoteDoc extends Models.Document {
     createdBy: string;
     createdByName: string;
     sourcePlaceholderId?: string;
+    duplicateExcused?: boolean;
+    punctuationExcused?: boolean;
+    spellingExcused?: boolean;
 }
 
 export interface InviteDoc extends Models.Document {

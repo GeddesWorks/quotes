@@ -149,7 +149,7 @@ const createDeployment = async () => {
   fs.mkdirSync(tmpDir, { recursive: true });
   const archivePath = path.join(tmpDir, `${functionId}.tar.gz`);
 
-  execSync(`tar -czf "${archivePath}" -C "${sourceDir}" .`, { stdio: "inherit" });
+  execSync(`tar --force-local -czf "${archivePath}" -C "${sourceDir}" .`, { stdio: "inherit" });
 
   const buffer = fs.readFileSync(archivePath);
   const form = new FormData();
