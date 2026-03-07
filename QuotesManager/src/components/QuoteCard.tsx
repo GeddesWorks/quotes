@@ -1,11 +1,13 @@
-import { Box, Button, Card, CardActions, CardContent, Stack, Typography } from "@mui/material";
+import { Box, Card, CardActions, CardContent, Stack, Typography } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
+import ActionButton from "./ActionButton";
 
 interface QuoteCardProps {
     text: string;
     author: string;
     addedBy?: string;
     canDelete?: boolean;
+    deleteLoading?: boolean;
     onDelete?: () => void;
     actions?: React.ReactNode;
     onSelect?: () => void;
@@ -16,6 +18,7 @@ const QuoteCard: React.FC<QuoteCardProps> = ({
     author,
     addedBy,
     canDelete,
+    deleteLoading = false,
     onDelete,
     actions,
     onSelect
@@ -54,16 +57,18 @@ const QuoteCard: React.FC<QuoteCardProps> = ({
                     <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
                         {actions}
                         {canDelete && (
-                            <Button
+                            <ActionButton
                                 variant="outlined"
                                 color="secondary"
+                                loading={deleteLoading}
+                                loadingLabel="Removing..."
                                 onClick={(event) => {
                                     event.stopPropagation();
                                     onDelete?.();
                                 }}
                             >
                                 Remove
-                            </Button>
+                            </ActionButton>
                         )}
                     </Box>
                 </CardActions>

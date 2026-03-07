@@ -31,6 +31,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useGroups } from "../contexts/GroupContext";
 import { useThemeMode } from "../contexts/ThemeModeContext";
 import { joinGroupByCode } from "../util/appwriteApi";
+import ActionButton from "./ActionButton";
 import CreateGroupDialog from "./CreateGroupDialog";
 
 const AppShell = () => {
@@ -44,6 +45,7 @@ const AppShell = () => {
     const [joinCode, setJoinCode] = useState("");
     const [joinError, setJoinError] = useState<string | null>(null);
     const [joining, setJoining] = useState(false);
+    const [signingOut, setSigningOut] = useState(false);
     const [installOpen, setInstallOpen] = useState(false);
     const [navOpen, setNavOpen] = useState(false);
     const isAdmin = activeMembership?.role === "owner" || activeMembership?.role === "admin";
@@ -84,6 +86,15 @@ const AppShell = () => {
             setJoinError(err instanceof Error ? err.message : "Failed to join group.");
         } finally {
             setJoining(false);
+        }
+    };
+
+    const handleSignOut = async () => {
+        setSigningOut(true);
+        try {
+            await signOut();
+        } finally {
+            setSigningOut(false);
         }
     };
 
@@ -216,9 +227,15 @@ const AppShell = () => {
                                 <Typography variant="body2" color="text.secondary">
                                     {user?.name || user?.email}
                                 </Typography>
-                                <Button color="secondary" variant="contained" onClick={signOut}>
+                                <ActionButton
+                                    color="secondary"
+                                    variant="contained"
+                                    onClick={handleSignOut}
+                                    loading={signingOut}
+                                    loadingLabel="Signing out..."
+                                >
                                     Sign out
-                                </Button>
+                                </ActionButton>
                             </Stack>
                         </>
                     )}
@@ -338,9 +355,15 @@ const AppShell = () => {
                         <Typography variant="body2" color="text.secondary">
                             {user?.name || user?.email}
                         </Typography>
-                        <Button color="secondary" variant="contained" onClick={signOut}>
+                        <ActionButton
+                            color="secondary"
+                            variant="contained"
+                            onClick={handleSignOut}
+                            loading={signingOut}
+                            loadingLabel="Signing out..."
+                        >
                             Sign out
-                        </Button>
+                        </ActionButton>
                     </Stack>
                 </Box>
             </Drawer>
@@ -377,9 +400,14 @@ const AppShell = () => {
                     <Button onClick={() => setJoinOpen(false)} disabled={joining}>
                         Cancel
                     </Button>
-                    <Button variant="contained" onClick={handleJoinGroup} disabled={joining}>
+                    <ActionButton
+                        variant="contained"
+                        onClick={handleJoinGroup}
+                        loading={joining}
+                        loadingLabel="Joining..."
+                    >
                         Join group
-                    </Button>
+                    </ActionButton>
                 </DialogActions>
             </Dialog>
             <Dialog open={installOpen} onClose={() => setInstallOpen(false)} maxWidth="sm" fullWidth>

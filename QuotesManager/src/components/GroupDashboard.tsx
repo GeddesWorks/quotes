@@ -50,6 +50,7 @@ import {
     updateQuoteText
 } from "../util/appwriteApi";
 import type { InviteDoc, MembershipDoc, PersonDoc, QuoteDoc } from "../util/appwriteTypes";
+import ActionButton from "./ActionButton";
 import QuoteCard from "./QuoteCard";
 import LoadingState from "./LoadingState";
 
@@ -724,6 +725,10 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
         () => Object.values(spellingActionLoading).some(Boolean),
         [spellingActionLoading]
     );
+    const submittingCardSx = submitting ? { opacity: 0.68, pointerEvents: "none" } : undefined;
+    const accountSubmittingCardSx = accountSubmitting
+        ? { opacity: 0.68, pointerEvents: "none" }
+        : undefined;
     const groupDoc = useMemo(
         () => groups.find((candidate) => candidate.$id === groupId),
         [groups, groupId]
@@ -1836,14 +1841,25 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                 </Box>
                 <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
                     {isAdmin && showSync && (
-                        <Button variant="outlined" onClick={handleSync} disabled={submitting}>
+                        <ActionButton
+                            variant="outlined"
+                            onClick={handleSync}
+                            loading={submitting}
+                            loadingLabel="Syncing..."
+                        >
                             Sync access
-                        </Button>
+                        </ActionButton>
                     )}
                     {isAdmin && (
-                        <Button variant="outlined" color="secondary" onClick={handleLeaveGroup}>
+                        <ActionButton
+                            variant="outlined"
+                            color="secondary"
+                            onClick={handleLeaveGroup}
+                            loading={submitting}
+                            loadingLabel="Leaving..."
+                        >
                             Leave group
-                        </Button>
+                        </ActionButton>
                     )}
                 </Stack>
             </Stack>
@@ -1877,7 +1893,8 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                             backgroundColor:
                                 theme.palette.mode === "dark"
                                     ? "rgba(255,255,255,0.04)"
-                                    : "rgba(0,0,0,0.02)"
+                                    : "rgba(0,0,0,0.02)",
+                            ...(accountSubmittingCardSx ?? {})
                         })}
                     >
                         <CardContent>
@@ -1903,9 +1920,11 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                     <Typography variant="body2" color="text.secondary">
                                         Updates your display name across every group.
                                     </Typography>
-                                    <Button
+                                    <ActionButton
                                         variant="contained"
                                         onClick={handleUpdateName}
+                                        loading={accountSubmitting}
+                                        loadingLabel="Saving..."
                                         disabled={
                                             accountSubmitting ||
                                             !nameDraft.trim() ||
@@ -1913,7 +1932,7 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                         }
                                     >
                                         Save name
-                                    </Button>
+                                    </ActionButton>
                                 </Stack>
                                 <Divider />
                                 <Stack spacing={1.5}>
@@ -1933,9 +1952,11 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                         value={emailPassword}
                                         onChange={(event) => setEmailPassword(event.target.value)}
                                     />
-                                    <Button
+                                    <ActionButton
                                         variant="outlined"
                                         onClick={handleUpdateEmail}
+                                        loading={accountSubmitting}
+                                        loadingLabel="Updating..."
                                         disabled={
                                             accountSubmitting ||
                                             !emailDraft.trim() ||
@@ -1944,7 +1965,7 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                         }
                                     >
                                         Update email
-                                    </Button>
+                                    </ActionButton>
                                 </Stack>
                                 <Divider />
                                 <Stack spacing={1.5}>
@@ -1970,9 +1991,11 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                         value={confirmPassword}
                                         onChange={(event) => setConfirmPassword(event.target.value)}
                                     />
-                                    <Button
+                                    <ActionButton
                                         variant="outlined"
                                         onClick={handleUpdatePassword}
+                                        loading={accountSubmitting}
+                                        loadingLabel="Updating..."
                                         disabled={
                                             accountSubmitting ||
                                             !currentPassword.trim() ||
@@ -1981,7 +2004,7 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                         }
                                     >
                                         Update password
-                                    </Button>
+                                    </ActionButton>
                                 </Stack>
                             </Stack>
                         </CardContent>
@@ -2020,7 +2043,10 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                 key={entry.quote.$id}
                                                 variant="outlined"
                                                 className="stagger"
-                                                sx={{ animationDelay: `${index * 30}ms` }}
+                                                sx={{
+                                                    animationDelay: `${index * 30}ms`,
+                                                    ...(accountSubmittingCardSx ?? {})
+                                                }}
                                             >
                                                 <CardContent>
                                                     <Stack spacing={1}>
@@ -2050,14 +2076,16 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                         paddingBottom: 2
                                                     }}
                                                 >
-                                                    <Button
+                                                    <ActionButton
                                                         variant="outlined"
                                                         color="secondary"
                                                         onClick={() => handleDeleteAccountQuote(entry)}
+                                                        loading={accountSubmitting}
+                                                        loadingLabel="Removing..."
                                                         disabled={accountSubmitting}
                                                     >
                                                         Remove
-                                                    </Button>
+                                                    </ActionButton>
                                                 </CardActions>
                                             </Card>
                                         ))}
@@ -2110,7 +2138,10 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                 key={entry.quote.$id}
                                                 variant="outlined"
                                                 className="stagger"
-                                                sx={{ animationDelay: `${index * 30}ms` }}
+                                                sx={{
+                                                    animationDelay: `${index * 30}ms`,
+                                                    ...(accountSubmittingCardSx ?? {})
+                                                }}
                                             >
                                                 <CardContent>
                                                     <Stack spacing={1}>
@@ -2140,14 +2171,16 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                         paddingBottom: 2
                                                     }}
                                                 >
-                                                    <Button
+                                                    <ActionButton
                                                         variant="outlined"
                                                         color="secondary"
                                                         onClick={() => handleDeleteAccountQuote(entry)}
+                                                        loading={accountSubmitting}
+                                                        loadingLabel="Removing..."
                                                         disabled={accountSubmitting}
                                                     >
                                                         Remove
-                                                    </Button>
+                                                    </ActionButton>
                                                 </CardActions>
                                             </Card>
                                         ))}
@@ -2171,7 +2204,7 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
 
             {activePrimaryTab === "group" && activeGroupTab === "quotes" && (
                             <Stack spacing={3}>
-                    <Card>
+                    <Card sx={submittingCardSx}>
                         <CardContent>
                             <Stack spacing={2}>
                                 <Typography variant="h6">Add a quote</Typography>
@@ -2201,7 +2234,7 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                     <MenuItem value="__new__">Add new user...</MenuItem>
                                 </TextField>
                                 {isAddingNewPerson && (
-                                    <Card variant="outlined">
+                                    <Card variant="outlined" sx={submittingCardSx}>
                                         <CardContent>
                                             <Stack spacing={2}>
                                                 <Typography variant="subtitle1">Add a new person</Typography>
@@ -2270,13 +2303,15 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                     multiline
                                     rows={3}
                                 />
-                                <Button
+                                <ActionButton
                                     variant="contained"
                                     onClick={handleAddQuote}
+                                    loading={submitting}
+                                    loadingLabel="Adding..."
                                     disabled={submitting || (isAddingNewPerson && newPersonMode !== "placeholder")}
                                 >
                                     Add quote
-                                </Button>
+                                </ActionButton>
                             </Stack>
                         </CardContent>
                     </Card>
@@ -2296,6 +2331,7 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                         author={person?.name || "Unknown"}
                                         addedBy={quote.createdByName}
                                         canDelete={isAdmin}
+                                        deleteLoading={submitting}
                                         onDelete={() => handleDeleteQuote(quote.$id)}
                                     />
                                 </Box>
@@ -2350,7 +2386,7 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                     <Grid container spacing={2}>
                         {filteredPeople.map((person) => (
                             <Grid item xs={12} md={6} key={person.$id}>
-                                <Card>
+                                <Card sx={submittingCardSx}>
                                     <CardContent>
                                         <Stack spacing={1}>
                                             <Stack
@@ -2371,25 +2407,29 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                     {person.isPlaceholder &&
                                                         !hasClaimedPlaceholder &&
                                                         claimablePlaceholders.some((entry) => entry.$id === person.$id) && (
-                                                        <Button
+                                                        <ActionButton
                                                             size="small"
                                                             variant="contained"
                                                             onClick={() => handleClaimPlaceholder(person.$id)}
+                                                            loading={submitting}
+                                                            loadingLabel="Claiming..."
                                                             disabled={submitting}
                                                         >
                                                             Claim
-                                                        </Button>
+                                                        </ActionButton>
                                                     )}
                                                     {person.isPlaceholder && isAdmin && (
-                                                        <Button
+                                                        <ActionButton
                                                             size="small"
                                                             variant="outlined"
                                                             color="secondary"
                                                             onClick={() => handleRemovePlaceholder(person)}
+                                                            loading={submitting}
+                                                            loadingLabel="Removing..."
                                                             disabled={submitting}
                                                         >
                                                             Remove
-                                                        </Button>
+                                                        </ActionButton>
                                                     )}
                                                     {!person.isPlaceholder && isAdmin && (() => {
                                                         const membership = members.find(
@@ -2408,15 +2448,17 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                             return null;
                                                         }
                                                         return (
-                                                            <Button
+                                                            <ActionButton
                                                                 size="small"
                                                                 variant="outlined"
                                                                 color="secondary"
                                                                 onClick={() => handleRemoveMember(membership)}
+                                                                loading={submitting}
+                                                                loadingLabel="Removing..."
                                                                 disabled={submitting}
                                                             >
                                                                 Remove
-                                                            </Button>
+                                                            </ActionButton>
                                                         );
                                                     })()}
                                                 </Stack>
@@ -2476,7 +2518,14 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                     : isAdmin && member.role === "member");
 
                             return (
-                                <Card key={member.$id} className="stagger" sx={{ animationDelay: `${index * 40}ms` }}>
+                                <Card
+                                    key={member.$id}
+                                    className="stagger"
+                                    sx={{
+                                        animationDelay: `${index * 40}ms`,
+                                        ...(submittingCardSx ?? {})
+                                    }}
+                                >
                                     <CardContent>
                                         <Stack spacing={2}>
                                             <Stack direction="row" spacing={2} alignItems="center">
@@ -2493,37 +2542,45 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                             </Stack>
                                             <Stack direction="row" spacing={2} flexWrap="wrap">
                                                 {canPromote && (
-                                                    <Button
+                                                    <ActionButton
                                                         variant="outlined"
                                                         onClick={() => handleRoleChange(member, "admin")}
+                                                        loading={submitting}
+                                                        loadingLabel="Saving..."
                                                     >
                                                         Make admin
-                                                    </Button>
+                                                    </ActionButton>
                                                 )}
                                                 {canDemote && (
-                                                    <Button
+                                                    <ActionButton
                                                         variant="outlined"
                                                         onClick={() => handleRoleChange(member, "member")}
+                                                        loading={submitting}
+                                                        loadingLabel="Saving..."
                                                     >
                                                         Remove admin
-                                                    </Button>
+                                                    </ActionButton>
                                                 )}
                                                 {isOwner && member.role !== "owner" && (
-                                                    <Button
+                                                    <ActionButton
                                                         variant="outlined"
                                                         onClick={() => handleTransferOwnership(member)}
+                                                        loading={submitting}
+                                                        loadingLabel="Saving..."
                                                     >
                                                         Make owner
-                                                    </Button>
+                                                    </ActionButton>
                                                 )}
                                                 {canRemove && (
-                                                    <Button
+                                                    <ActionButton
                                                         variant="outlined"
                                                         color="secondary"
                                                         onClick={() => handleRemoveMember(member)}
+                                                        loading={submitting}
+                                                        loadingLabel="Removing..."
                                                     >
                                                         Remove
-                                                    </Button>
+                                                    </ActionButton>
                                                 )}
                                             </Stack>
                                         </Stack>
@@ -2537,7 +2594,7 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
 
             {activePrimaryTab === "group" && activeGroupTab === "invites" && (
                 <Stack spacing={3}>
-                    <Card>
+                    <Card sx={submittingCardSx}>
                         <CardContent>
                             <Stack spacing={2}>
                                 <Typography variant="h6">Invite teammates</Typography>
@@ -2553,9 +2610,15 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                             size="small"
                                             sx={{ flex: 1 }}
                                         />
-                                        <Button variant="contained" onClick={handleCreateInvite} disabled={submitting}>
+                                        <ActionButton
+                                            variant="contained"
+                                            onClick={handleCreateInvite}
+                                            loading={submitting}
+                                            loadingLabel="Creating..."
+                                            disabled={submitting}
+                                        >
                                             Create invite code
-                                        </Button>
+                                        </ActionButton>
                                     </Stack>
                                 ) : (
                                     <Typography variant="body2" color="text.secondary">
@@ -2578,7 +2641,14 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                             const isEditing = editingInviteId === invite.$id;
                             const isExpanded = Boolean(expandedInvites[invite.$id]);
                             return (
-                                <Card key={invite.$id} className="stagger" sx={{ animationDelay: `${index * 40}ms` }}>
+                                <Card
+                                    key={invite.$id}
+                                    className="stagger"
+                                    sx={{
+                                        animationDelay: `${index * 40}ms`,
+                                        ...(submittingCardSx ?? {})
+                                    }}
+                                >
                                     <CardContent>
                                         <Stack spacing={1.5}>
                                             <Stack
@@ -2627,14 +2697,16 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                         <Stack direction="row" spacing={1}>
                                                             {isEditing ? (
                                                                 <>
-                                                                    <Button
+                                                                    <ActionButton
                                                                         size="small"
                                                                         variant="outlined"
                                                                         onClick={() => handleRenameInvite(invite.$id)}
+                                                                        loading={submitting}
+                                                                        loadingLabel="Saving..."
                                                                         disabled={submitting || !draftName.trim() || !canSave}
                                                                     >
                                                                         Save
-                                                                    </Button>
+                                                                    </ActionButton>
                                                                     <Button
                                                                         size="small"
                                                                         variant="text"
@@ -2651,24 +2723,28 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                                     </Button>
                                                                 </>
                                                             ) : (
-                                                                <Button
+                                                                <ActionButton
                                                                     size="small"
                                                                     variant="outlined"
                                                                     onClick={() => setEditingInviteId(invite.$id)}
+                                                                    loading={submitting}
+                                                                    loadingLabel="Loading..."
                                                                     disabled={submitting}
                                                                 >
                                                                     Rename
-                                                                </Button>
+                                                                </ActionButton>
                                                             )}
-                                                            <Button
+                                                            <ActionButton
                                                                 size="small"
                                                                 variant="outlined"
                                                                 color="secondary"
                                                                 onClick={() => handleDeleteInvite(invite.$id)}
+                                                                loading={submitting}
+                                                                loadingLabel="Deleting..."
                                                                 disabled={submitting || isEditing}
                                                             >
                                                                 Delete
-                                                            </Button>
+                                                            </ActionButton>
                                                         </Stack>
                                                     )}
                                                 </Stack>
@@ -2710,14 +2786,16 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                     Scan for exact duplicates (ignoring punctuation/case) and possible
                                     near-duplicates (similar wording). Quotes marked as excused are skipped.
                                 </Typography>
-                                <Button
+                                <ActionButton
                                     variant="contained"
                                     onClick={runDuplicateScan}
+                                    loading={submitting}
+                                    loadingLabel="Scanning..."
                                     disabled={submitting}
                                     sx={{ alignSelf: "flex-start" }}
                                 >
                                     Run duplicate scan
-                                </Button>
+                                </ActionButton>
                                 {duplicateScanRan && (
                                     <Typography variant="body2" color="text.secondary">
                                         Found {duplicateGroups.length} exact group
@@ -2756,28 +2834,32 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                     </Stack>
                                                 </CardContent>
                                                 <CardActions sx={{ justifyContent: "flex-end", px: 2, pb: 2 }}>
-                                                    <Button
+                                                    <ActionButton
                                                         size="small"
                                                         variant="outlined"
                                                         onClick={() => handleExcuseQuotes([quote.$id], "duplicate")}
+                                                        loading={submitting}
+                                                        loadingLabel="Saving..."
                                                         disabled={submitting}
                                                     >
                                                         Excuse
-                                                    </Button>
-                                                    <Button
+                                                    </ActionButton>
+                                                    <ActionButton
                                                         size="small"
                                                         variant="contained"
                                                         onClick={() => handleKeepOneFromExactGroup(group, quote.$id)}
+                                                        loading={submitting}
+                                                        loadingLabel="Saving..."
                                                         disabled={submitting}
                                                     >
                                                         Keep this
-                                                    </Button>
+                                                    </ActionButton>
                                                 </CardActions>
                                             </Card>
                                         );
                                     })}
                                     <Stack direction="row" spacing={1} flexWrap="wrap">
-                                        <Button
+                                        <ActionButton
                                             size="small"
                                             variant="outlined"
                                             onClick={() =>
@@ -2786,10 +2868,12 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                     "duplicate"
                                                 )
                                             }
+                                            loading={submitting}
+                                            loadingLabel="Saving..."
                                             disabled={submitting}
                                         >
                                             Keep both/all (excuse group)
-                                        </Button>
+                                        </ActionButton>
                                     </Stack>
                                 </Stack>
                             </CardContent>
@@ -2833,32 +2917,38 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                             </Grid>
                                         </Grid>
                                         <Stack direction="row" spacing={1} flexWrap="wrap">
-                                            <Button
+                                            <ActionButton
                                                 size="small"
                                                 variant="contained"
                                                 onClick={() => handleKeepNearPair(pair, "left")}
+                                                loading={submitting}
+                                                loadingLabel="Saving..."
                                                 disabled={submitting}
                                             >
                                                 Keep first
-                                            </Button>
-                                            <Button
+                                            </ActionButton>
+                                            <ActionButton
                                                 size="small"
                                                 variant="contained"
                                                 onClick={() => handleKeepNearPair(pair, "right")}
+                                                loading={submitting}
+                                                loadingLabel="Saving..."
                                                 disabled={submitting}
                                             >
                                                 Keep second
-                                            </Button>
-                                            <Button
+                                            </ActionButton>
+                                            <ActionButton
                                                 size="small"
                                                 variant="outlined"
                                                 onClick={() =>
                                                     handleExcuseQuotes([pair.left.$id, pair.right.$id], "duplicate")
                                                 }
+                                                loading={submitting}
+                                                loadingLabel="Saving..."
                                                 disabled={submitting}
                                             >
                                                 Keep both (excuse pair)
-                                            </Button>
+                                            </ActionButton>
                                         </Stack>
                                     </Stack>
                                 </CardContent>
@@ -2874,14 +2964,16 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                     Scan for likely punctuation/spacing issues. Excused quotes are skipped in
                                     future checks.
                                 </Typography>
-                                <Button
+                                <ActionButton
                                     variant="contained"
                                     onClick={runPunctuationScan}
+                                    loading={submitting}
+                                    loadingLabel="Scanning..."
                                     disabled={submitting || punctuationActionsInFlight}
                                     sx={{ alignSelf: "flex-start" }}
                                 >
                                     Run punctuation check
-                                </Button>
+                                </ActionButton>
                                 {punctuationScanRan && (
                                     <Typography variant="body2" color="text.secondary">
                                         Found {punctuationIssues.length} quote
@@ -2934,7 +3026,7 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                                     <Typography variant="body2" sx={{ flex: 1 }}>
                                                                         {suggestion}
                                                                     </Typography>
-                                                                    <Button
+                                                                    <ActionButton
                                                                         size="small"
                                                                         variant="outlined"
                                                                         onClick={() =>
@@ -2943,10 +3035,12 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                                                 suggestion
                                                                             )
                                                                         }
+                                                                        loading={isPunctuationBusy}
+                                                                        loadingLabel="Applying..."
                                                                         disabled={submitting || isPunctuationBusy}
                                                                     >
                                                                         Apply {index + 1}
-                                                                    </Button>
+                                                                    </ActionButton>
                                                                 </Stack>
                                                             ))}
                                                         </Stack>
@@ -2967,12 +3061,14 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                 </Stack>
                                             </CardContent>
                                             <CardActions sx={{ justifyContent: "flex-end", px: 2, pb: 2 }}>
-                                                <Button
+                                                <ActionButton
                                                     size="small"
                                                     variant="contained"
                                                     onClick={() =>
                                                         handleUpdatePunctuationText(entry.quote.$id, draft)
                                                     }
+                                                    loading={isPunctuationBusy}
+                                                    loadingLabel="Saving..."
                                                     disabled={
                                                         submitting ||
                                                         isPunctuationBusy ||
@@ -2981,15 +3077,17 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                     }
                                                 >
                                                     {isPunctuationBusy ? "Saving..." : "Save edit"}
-                                                </Button>
-                                                <Button
+                                                </ActionButton>
+                                                <ActionButton
                                                     size="small"
                                                     variant="outlined"
                                                     onClick={() => handleExcuseQuotes([entry.quote.$id], "punctuation")}
+                                                    loading={isPunctuationBusy}
+                                                    loadingLabel="Saving..."
                                                     disabled={submitting || isPunctuationBusy}
                                                 >
                                                     Excuse quote
-                                                </Button>
+                                                </ActionButton>
                                             </CardActions>
                                         </Card>
                                     );
@@ -3027,13 +3125,15 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                             disabled={spellingAllowSaving}
                                             placeholder="Add word (example: yall)"
                                         />
-                                        <Button
+                                        <ActionButton
                                             variant="outlined"
                                             onClick={handleAddAllowedWord}
+                                            loading={spellingAllowSaving}
+                                            loadingLabel="Adding..."
                                             disabled={spellingAllowSaving || !spellingAllowInput.trim()}
                                         >
                                             Add word
-                                        </Button>
+                                        </ActionButton>
                                     </Stack>
                                     <Typography variant="caption" color="text.secondary">
                                         Common slang is allowed by default. Add group-specific words here to
@@ -3058,9 +3158,11 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                         </Stack>
                                     )}
                                 </Stack>
-                                <Button
+                                <ActionButton
                                     variant="contained"
                                     onClick={runSpellingScan}
+                                    loading={submitting}
+                                    loadingLabel="Scanning..."
                                     disabled={
                                         submitting ||
                                         spellingActionsInFlight ||
@@ -3069,7 +3171,7 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                     sx={{ alignSelf: "flex-start" }}
                                 >
                                     Run spelling check
-                                </Button>
+                                </ActionButton>
                                 {spellingScanRan && (
                                     <Typography variant="body2" color="text.secondary">
                                         Found {spellingIssues.length} quote
@@ -3124,7 +3226,7 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                                     <Typography variant="body2" sx={{ flex: 1 }}>
                                                                         {suggestion}
                                                                     </Typography>
-                                                                    <Button
+                                                                    <ActionButton
                                                                         size="small"
                                                                         variant="outlined"
                                                                         onClick={() =>
@@ -3133,10 +3235,12 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                                                 suggestion
                                                                             )
                                                                         }
+                                                                        loading={isSpellingBusy}
+                                                                        loadingLabel="Applying..."
                                                                         disabled={submitting || isSpellingBusy}
                                                                     >
                                                                         Apply {index + 1}
-                                                                    </Button>
+                                                                    </ActionButton>
                                                                 </Stack>
                                                             ))}
                                                         </Stack>
@@ -3157,10 +3261,12 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                 </Stack>
                                             </CardContent>
                                             <CardActions sx={{ justifyContent: "flex-end", px: 2, pb: 2 }}>
-                                                <Button
+                                                <ActionButton
                                                     size="small"
                                                     variant="contained"
                                                     onClick={() => handleUpdateSpellingText(entry.quote.$id, draft)}
+                                                    loading={isSpellingBusy}
+                                                    loadingLabel="Saving..."
                                                     disabled={
                                                         submitting ||
                                                         isSpellingBusy ||
@@ -3169,15 +3275,17 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
                                                     }
                                                 >
                                                     {isSpellingBusy ? "Saving..." : "Save edit"}
-                                                </Button>
-                                                <Button
+                                                </ActionButton>
+                                                <ActionButton
                                                     size="small"
                                                     variant="outlined"
                                                     onClick={() => handleExcuseQuotes([entry.quote.$id], "spelling")}
+                                                    loading={isSpellingBusy}
+                                                    loadingLabel="Saving..."
                                                     disabled={submitting || isSpellingBusy}
                                                 >
                                                     Excuse quote
-                                                </Button>
+                                                </ActionButton>
                                             </CardActions>
                                         </Card>
                                     );
@@ -3189,16 +3297,22 @@ const GroupDashboard: React.FC<GroupDashboardProps> = ({
             )}
 
             {activePrimaryTab === "group" && activeGroupTab === "leave" && (
-                <Card>
+                <Card sx={submittingCardSx}>
                     <CardContent>
                         <Stack spacing={2}>
                             <Typography variant="h6">Leave group</Typography>
                             <Typography variant="body2" color="text.secondary">
                                 You can leave at any time. Owners must transfer ownership before leaving.
                             </Typography>
-                            <Button variant="outlined" color="secondary" onClick={handleLeaveGroup}>
+                            <ActionButton
+                                variant="outlined"
+                                color="secondary"
+                                onClick={handleLeaveGroup}
+                                loading={submitting}
+                                loadingLabel="Leaving..."
+                            >
                                 Leave group
-                            </Button>
+                            </ActionButton>
                         </Stack>
                     </CardContent>
                 </Card>

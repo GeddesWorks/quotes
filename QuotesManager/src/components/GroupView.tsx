@@ -36,6 +36,7 @@ import {
     unclaimPlaceholder
 } from "../util/appwriteApi";
 import type { MembershipDoc, PersonDoc, QuoteDoc } from "../util/appwriteTypes";
+import ActionButton from "./ActionButton";
 import LoadingState from "./LoadingState";
 import { CombinedView, CustomView, PeopleFirstView, QuoteWallView, TimelineView } from "./viewModes";
 import { defaultModuleOrder, viewModules } from "./viewModules";
@@ -193,6 +194,7 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
     const [newPersonName, setNewPersonName] = useState("");
     const [quoteText, setQuoteText] = useState("");
     const [submitting, setSubmitting] = useState(false);
+    const [activeAction, setActiveAction] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState("combined");
     const [moreOpen, setMoreOpen] = useState(false);
     const [customizeOpen, setCustomizeOpen] = useState(false);
@@ -731,6 +733,7 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
             setError("Please enter a quote.");
             return;
         }
+        setActiveAction("addQuote");
         setSubmitting(true);
         setError(null);
         setMessage(null);
@@ -783,10 +786,12 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
             }
         } finally {
             setSubmitting(false);
+            setActiveAction(null);
         }
     };
 
     const handleClaimPlaceholder = async (placeholderId: string) => {
+        setActiveAction(`claim:${placeholderId}`);
         setSubmitting(true);
         setError(null);
         setMessage(null);
@@ -800,6 +805,7 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
             setError(err instanceof Error ? err.message : "Failed to claim placeholder.");
         } finally {
             setSubmitting(false);
+            setActiveAction(null);
         }
     };
 
@@ -808,6 +814,7 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
         if (!window.confirm("Unclaim your placeholder? Your old quotes will move back.")) {
             return;
         }
+        setActiveAction("unclaimPlaceholder");
         setSubmitting(true);
         setError(null);
         setMessage(null);
@@ -820,6 +827,7 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
             setError(err instanceof Error ? err.message : "Failed to unclaim placeholder.");
         } finally {
             setSubmitting(false);
+            setActiveAction(null);
         }
     };
 
@@ -876,14 +884,15 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
                         </Button>
                     )}
                     {hasClaimedPlaceholder && (
-                        <Button
+                        <ActionButton
                             variant="outlined"
                             color="secondary"
                             onClick={handleUnclaimPlaceholder}
-                            disabled={submitting}
+                            loading={submitting && activeAction === "unclaimPlaceholder"}
+                            loadingLabel="Unclaiming..."
                         >
                             Unclaim placeholder
-                        </Button>
+                        </ActionButton>
                     )}
                 </Stack>
             </Stack>
@@ -1188,7 +1197,14 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
                             <MenuItem value="__new__">Add new user...</MenuItem>
                         </TextField>
                         {isAddingNewPerson && (
-                            <Card variant="outlined">
+                            <Card
+                                variant="outlined"
+                                sx={
+                                    submitting
+                                        ? { opacity: 0.65, pointerEvents: "none" }
+                                        : undefined
+                                }
+                            >
                                 <CardContent>
                                     <Stack spacing={2}>
                                         <Typography variant="subtitle1">Add a new person</Typography>
@@ -1261,13 +1277,15 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
                     <Button onClick={() => setAddOpen(false)} disabled={submitting}>
                         Cancel
                     </Button>
-                    <Button
+                    <ActionButton
                         variant="contained"
                         onClick={handleAddQuote}
+                        loading={submitting && activeAction === "addQuote"}
+                        loadingLabel="Saving..."
                         disabled={submitting || (isAddingNewPerson && newPersonMode !== "placeholder")}
                     >
                         Save quote
-                    </Button>
+                    </ActionButton>
                 </DialogActions>
             </Dialog>
 
@@ -1281,7 +1299,15 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
                             </Typography>
                         )}
                         {claimablePlaceholders.map((person) => (
-                            <Card key={person.$id} variant="outlined">
+                            <Card
+                                key={person.$id}
+                                variant="outlined"
+                                sx={
+                                    submitting
+                                        ? { opacity: 0.65, pointerEvents: "none" }
+                                        : undefined
+                                }
+                            >
                                 <CardContent>
                                     <Stack spacing={1.5} direction={{ xs: "column", sm: "row" }} alignItems="center">
                                         <Box flex={1}>
@@ -1290,13 +1316,15 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
                                                 Claiming will move all quotes onto your profile.
                                             </Typography>
                                         </Box>
-                                        <Button
+                                        <ActionButton
                                             variant="contained"
                                             onClick={() => handleClaimPlaceholder(person.$id)}
+                                            loading={submitting && activeAction === `claim:${person.$id}`}
+                                            loadingLabel="Claiming..."
                                             disabled={submitting}
                                         >
                                             Claim
-                                        </Button>
+                                        </ActionButton>
                                     </Stack>
                                 </CardContent>
                             </Card>
@@ -1304,7 +1332,9 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setClaimOpen(false)}>Close</Button>
+                    <Button onClick={() => setClaimOpen(false)} disabled={submitting}>
+                        Close
+                    </Button>
                 </DialogActions>
             </Dialog>
         </Stack>
