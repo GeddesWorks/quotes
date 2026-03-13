@@ -19,5 +19,6 @@ export interface ViewModeProps {
     onSearchChange: (value: string) => void;
     onQuoteSelect?: (quoteId: string) => void;
     favorites?: string[];
+    quoteLikeCounts?: Record<string, number>;
     onToggleFavorite?: (quoteId: string) => void;
 }

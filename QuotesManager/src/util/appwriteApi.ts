@@ -105,6 +105,15 @@ const normalizeAllowWords = (values: string[]) =>
         )
     ).slice(0, 300);
 
+const normalizeFavoriteQuoteIds = (values: unknown) =>
+    Array.from(
+        new Set(
+            (Array.isArray(values) ? values : [])
+                .map((value) => String(value || "").trim())
+                .filter(Boolean)
+        )
+    ).slice(0, 500);
+
 const buildReadPermissions = (userIds: string[]) =>
     unique(userIds).map((id) => Permission.read(Role.user(id)));
 
@@ -881,6 +890,36 @@ export const updateQuoteText = async (
             ? { text: normalizedText, punctuationExcused: true }
             : { text: normalizedText, spellingExcused: true }
     );
+};
+
+export const updateMembershipFavorites = async (
+    groupId: string,
+    membershipId: string,
+    favoriteQuoteIds: string[]
+) => {
+    const normalizedFavoriteQuoteIds = normalizeFavoriteQuoteIds(favoriteQuoteIds);
+    if (isStrictPermissions()) {
+        try {
+            return await callFunction<{ favoriteQuoteIds: string[] }>("updateMembershipFavorites", {
+                groupId,
+                favoriteQuoteIds: normalizedFavoriteQuoteIds
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message.toLowerCase() : "";
+            if (!message.includes("unknown action")) {
+                throw error;
+            }
+            // Backward compatibility while function rollout catches up.
+        }
+    }
+    requireConfig();
+    const updated = await databases.updateDocument<MembershipDoc>(
+        appwriteConfig.databaseId,
+        getCollections().memberships,
+        membershipId,
+        { favoriteQuoteIds: normalizedFavoriteQuoteIds }
+    );
+    return { favoriteQuoteIds: updated.favoriteQuoteIds || [] };
 };
 
 export const claimPlaceholder = async (
