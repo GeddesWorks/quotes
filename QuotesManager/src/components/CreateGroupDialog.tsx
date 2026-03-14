@@ -1,5 +1,6 @@
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from "@mui/material";
 import { useState } from "react";
+import ActionButton from "./ActionButton";
 
 interface CreateGroupDialogProps {
     open: boolean;
@@ -42,9 +43,14 @@ const CreateGroupDialog: React.FC<CreateGroupDialogProps> = ({ open, onClose, on
                 <Button onClick={onClose} disabled={loading}>
                     Cancel
                 </Button>
-                <Button onClick={handleCreate} variant="contained" disabled={loading}>
+                <ActionButton
+                    onClick={handleCreate}
+                    variant="contained"
+                    loading={loading}
+                    loadingLabel="Creating..."
+                >
                     Create group
-                </Button>
+                </ActionButton>
             </DialogActions>
         </Dialog>
     );

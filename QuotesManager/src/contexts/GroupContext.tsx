@@ -13,6 +13,7 @@ interface GroupSummary {
     name: string;
     ownerId?: string;
     createdAt?: string;
+    spellingAllowList?: string[];
 }
 
 interface GroupContextValue {

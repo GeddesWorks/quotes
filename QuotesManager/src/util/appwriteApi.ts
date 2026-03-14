@@ -90,6 +90,20 @@ const isTimeoutError = (error: unknown) => {
 const nowIso = () => new Date().toISOString();
 
 const unique = (values: string[]) => Array.from(new Set(values));
+const normalizeAllowWord = (value: string) =>
+    value
+        .trim()
+        .toLowerCase()
+        .replace(/^[^a-z0-9']+|[^a-z0-9']+$/g, "");
+
+const normalizeAllowWords = (values: string[]) =>
+    Array.from(
+        new Set(
+            values
+                .map((value) => normalizeAllowWord(String(value || "")))
+                .filter((value) => /^[a-z0-9][a-z0-9'-]{0,31}$/.test(value))
+        )
+    ).slice(0, 300);
 
 const buildReadPermissions = (userIds: string[]) =>
     unique(userIds).map((id) => Permission.read(Role.user(id)));
@@ -207,6 +221,195 @@ const randomInviteCode = (length = 8) => {
     return Array.from(values, (value) => alphabet[value % alphabet.length]).join("");
 };
 
+const hashToken = (value: string) => {
+    let hash = 2166136261;
+    for (let i = 0; i < value.length; i += 1) {
+        hash ^= value.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(16).padStart(8, "0");
+};
+
+const buildMemberKey = (groupId: string, userId: string) =>
+    `${hashToken(groupId)}${hashToken(userId)}${hashToken(`${groupId}:${userId}`)}`;
+
+const getMembershipDocId = (groupId: string, userId: string) =>
+    `member_${buildMemberKey(groupId, userId)}`;
+
+const getMemberPersonDocId = (groupId: string, userId: string) =>
+    `person_${buildMemberKey(groupId, userId)}`;
+
+const getErrorCode = (error: unknown) => {
+    if (!error || typeof error !== "object" || !("code" in error)) {
+        return 0;
+    }
+    const code = (error as { code?: number | string }).code;
+    if (typeof code === "number") {
+        return code;
+    }
+    return Number(code) || 0;
+};
+
+const getErrorMessage = (error: unknown) => {
+    if (!error || typeof error !== "object" || !("message" in error)) {
+        return "";
+    }
+    const message = (error as { message?: unknown }).message;
+    return typeof message === "string" ? message : "";
+};
+
+const isConflictError = (error: unknown) => {
+    const code = getErrorCode(error);
+    const message = getErrorMessage(error).toLowerCase();
+    return code === 409 || message.includes("already exists") || message.includes("duplicate");
+};
+
+const isNotFoundError = (error: unknown) => getErrorCode(error) === 404;
+
+const listMemberPeopleByUser = async (groupId: string, userId: string) => {
+    const people = await listAllDocuments<PersonDoc>(getCollections().people, [
+        Query.equal("groupId", groupId)
+    ]);
+    return people
+        .filter((person) => !person.isPlaceholder && person.userId === userId)
+        .sort((left, right) => String(left.createdAt || "").localeCompare(String(right.createdAt || "")));
+};
+
+const movePersonReferences = async (groupId: string, fromPersonId: string, toPersonId: string) => {
+    if (!fromPersonId || !toPersonId || fromPersonId === toPersonId) {
+        return;
+    }
+
+    const quotes = await listAllDocuments<QuoteDoc>(getCollections().quotes, [
+        Query.equal("groupId", groupId),
+        Query.equal("personId", fromPersonId)
+    ]);
+
+    for (const quote of quotes) {
+        await databases.updateDocument(
+            appwriteConfig.databaseId,
+            getCollections().quotes,
+            quote.$id,
+            { personId: toPersonId }
+        );
+    }
+
+    const memberships = await listAllDocuments<MembershipDoc>(getCollections().memberships, [
+        Query.equal("groupId", groupId)
+    ]);
+
+    for (const membership of memberships) {
+        if (membership.personId !== fromPersonId) {
+            continue;
+        }
+        await databases.updateDocument(
+            appwriteConfig.databaseId,
+            getCollections().memberships,
+            membership.$id,
+            { personId: toPersonId }
+        );
+    }
+};
+
+const pickCanonicalPerson = (
+    people: PersonDoc[],
+    preferredPersonId: string | undefined,
+    deterministicPersonId: string
+) => {
+    if (preferredPersonId) {
+        const preferred = people.find((person) => person.$id === preferredPersonId);
+        if (preferred) {
+            return preferred;
+        }
+    }
+    const deterministic = people.find((person) => person.$id === deterministicPersonId);
+    if (deterministic) {
+        return deterministic;
+    }
+    return people[0];
+};
+
+interface EnsureSingleMemberPersonParams {
+    groupId: string;
+    userId: string;
+    displayName: string;
+    createdBy: string;
+    memberIds: string[];
+    adminIds: string[];
+    preferredPersonId?: string;
+}
+
+const ensureSingleMemberPerson = async ({
+    groupId,
+    userId,
+    displayName,
+    createdBy,
+    memberIds,
+    adminIds,
+    preferredPersonId
+}: EnsureSingleMemberPersonParams): Promise<PersonDoc> => {
+    const deterministicPersonId = getMemberPersonDocId(groupId, userId);
+    let people = await listMemberPeopleByUser(groupId, userId);
+
+    if (people.length === 0) {
+        try {
+            const created = await databases.createDocument<PersonDoc>(
+                appwriteConfig.databaseId,
+                getCollections().people,
+                deterministicPersonId,
+                {
+                    groupId,
+                    name: displayName,
+                    userId,
+                    isPlaceholder: false,
+                    createdAt: nowIso(),
+                    createdBy
+                },
+                personPermissions(memberIds, adminIds, false)
+            );
+            people = [created];
+        } catch (err) {
+            if (!isConflictError(err)) {
+                throw err;
+            }
+            try {
+                const existing = await databases.getDocument<PersonDoc>(
+                    appwriteConfig.databaseId,
+                    getCollections().people,
+                    deterministicPersonId
+                );
+                people = [existing];
+            } catch (readErr) {
+                if (!isNotFoundError(readErr)) {
+                    throw readErr;
+                }
+                people = await listMemberPeopleByUser(groupId, userId);
+            }
+        }
+    }
+
+    const canonical = pickCanonicalPerson(people, preferredPersonId, deterministicPersonId);
+    if (!canonical) {
+        throw new Error("Could not resolve member profile.");
+    }
+
+    for (const person of people) {
+        if (person.$id === canonical.$id) {
+            continue;
+        }
+        await movePersonReferences(groupId, person.$id, canonical.$id);
+        try {
+            await databases.deleteDocument(appwriteConfig.databaseId, getCollections().people, person.$id);
+        } catch (err) {
+            if (!isNotFoundError(err)) {
+                throw err;
+            }
+        }
+    }
+
+    return canonical;
+};
+
 const listInviteIds = async (groupId: string) => {
     try {
         const invites = await listInvites(groupId);
@@ -291,7 +494,8 @@ export const createGroupWithOwner = async (name: string, userId: string, display
         {
             name,
             ownerId: userId,
-            createdAt
+            createdAt,
+            spellingAllowList: []
         },
         groupPermissions(memberIds, adminIds, userId)
     );
@@ -332,6 +536,32 @@ export const createGroupWithOwner = async (name: string, userId: string, display
     await createInvite(groupId, name, adminIds, "General");
 
     return { group, membership, person };
+};
+
+export const updateGroupSpellingAllowList = async (groupId: string, words: string[]) => {
+    const normalizedWords = normalizeAllowWords(words);
+    if (isStrictPermissions()) {
+        try {
+            return await callFunction<{ spellingAllowList: string[] }>("updateGroupSpellingAllowList", {
+                groupId,
+                words: normalizedWords
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message.toLowerCase() : "";
+            if (!message.includes("unknown action")) {
+                throw error;
+            }
+            // Backward compatibility while function rollout catches up.
+        }
+    }
+    requireConfig();
+    const updated = await databases.updateDocument<GroupDoc>(
+        appwriteConfig.databaseId,
+        getCollections().groups,
+        groupId,
+        { spellingAllowList: normalizedWords }
+    );
+    return { spellingAllowList: updated.spellingAllowList || [] };
 };
 
 export const createInvite = async (
@@ -441,66 +671,76 @@ export const joinGroupByCode = async (code: string, userId: string, displayName:
     const groupId = invite.groupId;
     const groupName = invite.groupName || "Group";
     const createdAt = nowIso();
-
     const existingMemberships = await databases.listDocuments<MembershipDoc>(
         appwriteConfig.databaseId,
         getCollections().memberships,
-        [
-            Query.equal("groupId", groupId),
-            Query.equal("userId", userId),
-            Query.limit(1)
-        ]
+        [Query.equal("groupId", groupId), Query.equal("userId", userId), Query.limit(1)]
     );
 
-    const existingMembership = existingMemberships.documents[0];
-    if (existingMembership) {
-        let existingPerson: PersonDoc | undefined;
-        if (existingMembership.personId) {
-            try {
-                existingPerson = await databases.getDocument<PersonDoc>(
-                    appwriteConfig.databaseId,
-                    getCollections().people,
-                    existingMembership.personId
-                );
-            } catch {
-                existingPerson = undefined;
+    let membership = existingMemberships.documents[0];
+    if (!membership) {
+        try {
+            membership = await databases.createDocument<MembershipDoc>(
+                appwriteConfig.databaseId,
+                getCollections().memberships,
+                getMembershipDocId(groupId, userId),
+                {
+                    groupId,
+                    groupName,
+                    userId,
+                    role: "member",
+                    displayName,
+                    personId: "",
+                    claimedPlaceholderId: "",
+                    claimedPlaceholderName: "",
+                    createdAt
+                },
+                membershipPermissions([userId, invite.createdBy], [invite.createdBy], userId)
+            );
+        } catch (err) {
+            if (!isConflictError(err)) {
+                throw err;
+            }
+            const fetched = await databases.listDocuments<MembershipDoc>(
+                appwriteConfig.databaseId,
+                getCollections().memberships,
+                [Query.equal("groupId", groupId), Query.equal("userId", userId), Query.limit(1)]
+            );
+            membership = fetched.documents[0];
+            if (!membership) {
+                throw err;
             }
         }
-        return { groupId, membership: existingMembership, person: existingPerson };
     }
 
-    const person = await databases.createDocument<PersonDoc>(
-        appwriteConfig.databaseId,
-        getCollections().people,
-        ID.unique(),
-        {
-            groupId,
-            name: displayName,
-            userId,
-            isPlaceholder: false,
-            createdAt,
-            createdBy: userId
-        },
-        personPermissions([userId, invite.createdBy], [invite.createdBy], false)
-    );
+    const refreshedMembers = await listGroupMembers(groupId);
+    const memberIds = refreshedMembers.map((member) => member.userId);
+    const adminIds = refreshedMembers
+        .filter((member) => member.role !== "member")
+        .map((member) => member.userId);
 
-    const membership = await databases.createDocument<MembershipDoc>(
-        appwriteConfig.databaseId,
-        getCollections().memberships,
-        ID.unique(),
-        {
-            groupId,
-            groupName,
-            userId,
-            role: "member",
-            displayName,
-            personId: person.$id,
-            claimedPlaceholderId: "",
-            claimedPlaceholderName: "",
-            createdAt
-        },
-        membershipPermissions([userId, invite.createdBy], [invite.createdBy], userId)
-    );
+    const person = await ensureSingleMemberPerson({
+        groupId,
+        userId,
+        displayName,
+        createdBy: userId,
+        memberIds,
+        adminIds,
+        preferredPersonId: membership.personId
+    });
+
+    if (
+        membership.personId !== person.$id ||
+        membership.displayName !== displayName ||
+        membership.groupName !== groupName
+    ) {
+        membership = await databases.updateDocument<MembershipDoc>(
+            appwriteConfig.databaseId,
+            getCollections().memberships,
+            membership.$id,
+            { personId: person.$id, displayName, groupName }
+        );
+    }
 
     return { groupId, membership, person };
 };
@@ -555,7 +795,10 @@ export const createQuote = async (
             text,
             createdAt: nowIso(),
             createdBy,
-            createdByName
+            createdByName,
+            duplicateExcused: false,
+            punctuationExcused: false,
+            spellingExcused: false
         },
         quotePermissions(memberIds, adminIds)
     );
@@ -568,6 +811,76 @@ export const deleteQuote = async (groupId: string, quoteId: string) => {
     }
     requireConfig();
     await databases.deleteDocument(appwriteConfig.databaseId, getCollections().quotes, quoteId);
+};
+
+export const deleteQuoteSelf = async (groupId: string, quoteId: string) => {
+    if (isStrictPermissions()) {
+        await callFunction("deleteQuoteSelf", { groupId, quoteId });
+        return;
+    }
+    requireConfig();
+    await databases.deleteDocument(appwriteConfig.databaseId, getCollections().quotes, quoteId);
+};
+
+export const setQuoteExcuse = async (
+    groupId: string,
+    quoteId: string,
+    tool: "duplicate" | "punctuation" | "spelling",
+    excused: boolean
+) => {
+    if (isStrictPermissions()) {
+        return await callFunction<QuoteDoc>("setQuoteExcuse", { groupId, quoteId, tool, excused });
+    }
+    requireConfig();
+    const field =
+        tool === "duplicate"
+            ? "duplicateExcused"
+            : tool === "punctuation"
+              ? "punctuationExcused"
+              : "spellingExcused";
+    return await databases.updateDocument<QuoteDoc>(
+        appwriteConfig.databaseId,
+        getCollections().quotes,
+        quoteId,
+        { [field]: excused }
+    );
+};
+
+export const updateQuoteText = async (
+    groupId: string,
+    quoteId: string,
+    text: string,
+    tool: "punctuation" | "spelling" = "punctuation"
+) => {
+    const normalizedText = text.trim();
+    if (!normalizedText) {
+        throw new Error("Quote text cannot be empty.");
+    }
+    if (isStrictPermissions()) {
+        try {
+            return await callFunction<QuoteDoc>("updateQuoteText", {
+                groupId,
+                quoteId,
+                text: normalizedText,
+                tool
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message.toLowerCase() : "";
+            if (!message.includes("unknown action")) {
+                throw error;
+            }
+            // Backward compatibility while function rollout catches up.
+        }
+    }
+    requireConfig();
+    return await databases.updateDocument<QuoteDoc>(
+        appwriteConfig.databaseId,
+        getCollections().quotes,
+        quoteId,
+        tool === "punctuation"
+            ? { text: normalizedText, punctuationExcused: true }
+            : { text: normalizedText, spellingExcused: true }
+    );
 };
 
 export const claimPlaceholder = async (

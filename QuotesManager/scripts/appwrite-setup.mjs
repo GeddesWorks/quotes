@@ -196,7 +196,8 @@ const setup = async () => {
   attributeCreates.push(
     ensureAttribute(collections.groups, "string", { key: "name", size: 255, required: true, array: false }),
     ensureAttribute(collections.groups, "string", { key: "ownerId", size: 64, required: true, array: false }),
-    ensureAttribute(collections.groups, "string", { key: "createdAt", size: 64, required: true, array: false })
+    ensureAttribute(collections.groups, "string", { key: "createdAt", size: 64, required: true, array: false }),
+    ensureAttribute(collections.groups, "string", { key: "spellingAllowList", size: 32, required: false, array: true })
   );
 
   // Memberships
@@ -235,7 +236,10 @@ const setup = async () => {
     ensureAttribute(collections.quotes, "string", { key: "createdAt", size: 64, required: true, array: false }),
     ensureAttribute(collections.quotes, "string", { key: "createdBy", size: 64, required: true, array: false }),
     ensureAttribute(collections.quotes, "string", { key: "createdByName", size: 255, required: true, array: false }),
-    ensureAttribute(collections.quotes, "string", { key: "sourcePlaceholderId", size: 64, required: false, array: false })
+    ensureAttribute(collections.quotes, "string", { key: "sourcePlaceholderId", size: 64, required: false, array: false }),
+    ensureAttribute(collections.quotes, "boolean", { key: "duplicateExcused", required: false, array: false }),
+    ensureAttribute(collections.quotes, "boolean", { key: "punctuationExcused", required: false, array: false }),
+    ensureAttribute(collections.quotes, "boolean", { key: "spellingExcused", required: false, array: false })
   );
 
   // Invites
@@ -250,7 +254,7 @@ const setup = async () => {
 
   await Promise.all(attributeCreates);
 
-  await waitForAttributes(collections.groups, ["name", "ownerId", "createdAt"]);
+  await waitForAttributes(collections.groups, ["name", "ownerId", "createdAt", "spellingAllowList"]);
   await waitForAttributes(collections.memberships, [
     "groupId",
     "groupName",
@@ -277,7 +281,10 @@ const setup = async () => {
     "createdAt",
     "createdBy",
     "createdByName",
-    "sourcePlaceholderId"
+    "sourcePlaceholderId",
+    "duplicateExcused",
+    "punctuationExcused",
+    "spellingExcused"
   ]);
   await waitForAttributes(collections.invites, [
     "groupId",
@@ -291,8 +298,10 @@ const setup = async () => {
   await ensureIndex(collections.memberships, "membership_user", "key", ["userId"], ["ASC"]);
   await ensureIndex(collections.memberships, "membership_group_display", "key", ["groupId", "displayName"], ["ASC", "ASC"]);
   await ensureIndex(collections.memberships, "membership_group_user", "unique", ["groupId", "userId"], ["ASC", "ASC"]);
+  await ensureIndex(collections.memberships, "membership_group_person", "key", ["groupId", "personId"], ["ASC", "ASC"]);
 
   await ensureIndex(collections.people, "people_group_name", "key", ["groupId", "name"], ["ASC", "ASC"]);
+  await ensureIndex(collections.people, "people_group_user", "key", ["groupId", "userId"], ["ASC", "ASC"]);
 
   await ensureIndex(collections.quotes, "quotes_group_created", "key", ["groupId", "createdAt"], ["ASC", "DESC"]);
   await ensureIndex(collections.quotes, "quotes_group_person", "key", ["groupId", "personId"], ["ASC", "ASC"]);
