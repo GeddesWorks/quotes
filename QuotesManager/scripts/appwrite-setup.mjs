@@ -58,7 +58,7 @@ const ensureDatabase = async () => {
   }
 
   try {
-    await request("POST", "/databases", { databaseId, name: "Quotes Manager v2" });
+    await request("POST", "/databases", { databaseId, name: "QuoteDump" });
     console.log(`Created database ${databaseId}`);
   } catch (err) {
     if (err.status === 409) {

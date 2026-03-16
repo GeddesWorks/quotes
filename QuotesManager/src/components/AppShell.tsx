@@ -7,32 +7,33 @@ import {
     DialogContent,
     DialogTitle,
     Divider,
+    Drawer,
     FormControl,
     IconButton,
     InputLabel,
     List,
     ListItemButton,
     ListItemText,
-    Drawer,
     MenuItem,
     Select,
     Stack,
-    Toolbar,
     TextField,
+    Toolbar,
     Typography,
     useMediaQuery
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
-import { useState } from "react";
-import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
 import CloseIcon from "@mui/icons-material/Close";
 import MenuIcon from "@mui/icons-material/Menu";
+import { useState } from "react";
+import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useGroups } from "../contexts/GroupContext";
 import { useThemeMode } from "../contexts/ThemeModeContext";
 import { joinGroupByCode } from "../util/appwriteApi";
 import ActionButton from "./ActionButton";
 import CreateGroupDialog from "./CreateGroupDialog";
+import QuoteDumpLogo from "./QuoteDumpLogo";
 
 const AppShell = () => {
     const theme = useTheme();
@@ -125,22 +126,29 @@ const AppShell = () => {
                                     flex: 1,
                                     minWidth: 0,
                                     display: "flex",
-                                    alignItems: "baseline",
-                                    flexWrap: "wrap",
-                                    columnGap: 1,
-                                    rowGap: 0.5
+                                    alignItems: "center",
+                                    gap: 1.5
                                 }}
                             >
-                                <Typography
-                                    variant="h6"
-                                    sx={{ fontWeight: 700, color: "text.primary", whiteSpace: "nowrap" }}
+                                <Box
+                                    component={RouterLink}
+                                    to="/"
+                                    aria-label="QuoteDump home"
+                                    sx={{ display: "inline-flex", textDecoration: "none", flexShrink: 0 }}
                                 >
-                                    Quotes Manager
-                                </Typography>
+                                    <QuoteDumpLogo size={34} />
+                                </Box>
                                 <Typography
                                     variant="body2"
                                     color="text.secondary"
-                                    sx={{ marginLeft: "auto", textAlign: "right", fontWeight: 600 }}
+                                    sx={{
+                                        marginLeft: "auto",
+                                        textAlign: "right",
+                                        fontWeight: 600,
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap"
+                                    }}
                                 >
                                     {activeGroupName}
                                 </Typography>
@@ -148,10 +156,15 @@ const AppShell = () => {
                         </>
                     ) : (
                         <>
-                            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
-                                <Typography variant="h6" sx={{ fontWeight: 700, color: "text.primary" }}>
-                                    Quotes Manager
-                                </Typography>
+                            <Stack direction="row" spacing={2.5} alignItems="center" flexWrap="wrap">
+                                <Box
+                                    component={RouterLink}
+                                    to="/"
+                                    aria-label="QuoteDump home"
+                                    sx={{ display: "inline-flex", textDecoration: "none" }}
+                                >
+                                    <QuoteDumpLogo size={40} />
+                                </Box>
                                 <Stack direction="row" spacing={1}>
                                     <Button
                                         component={RouterLink}
@@ -252,9 +265,15 @@ const AppShell = () => {
             >
                 <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
                     <Stack direction="row" alignItems="center" justifyContent="space-between">
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                            Menu
-                        </Typography>
+                        <Box
+                            component={RouterLink}
+                            to="/"
+                            aria-label="QuoteDump home"
+                            onClick={() => setNavOpen(false)}
+                            sx={{ display: "inline-flex", textDecoration: "none" }}
+                        >
+                            <QuoteDumpLogo size={34} />
+                        </Box>
                         <IconButton aria-label="Close navigation menu" onClick={() => setNavOpen(false)}>
                             <CloseIcon />
                         </IconButton>
@@ -411,7 +430,7 @@ const AppShell = () => {
                 </DialogActions>
             </Dialog>
             <Dialog open={installOpen} onClose={() => setInstallOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>Add Quotes Manager to your home screen</DialogTitle>
+                <DialogTitle>Add QuoteDump to your home screen</DialogTitle>
                 <DialogContent>
                     <Stack spacing={2} marginTop={1}>
                         {isIOS && (
@@ -424,10 +443,10 @@ const AppShell = () => {
                                     2. Tap the Share button (square with an up arrow).
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    3. Choose “Add to Home Screen”.
+                                    3. Choose "Add to Home Screen".
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    4. Rename if you want, then tap “Add”.
+                                    4. Rename it if you want, then tap "Add".
                                 </Typography>
                             </>
                         )}
@@ -438,7 +457,7 @@ const AppShell = () => {
                                     1. Tap the menu (three dots).
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    2. Tap “Add to Home screen” or “Install app”.
+                                    2. Tap "Add to Home screen" or "Install app".
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
                                     3. Confirm to add it.
@@ -449,7 +468,7 @@ const AppShell = () => {
                             <>
                                 <Typography variant="subtitle1">Mobile browser</Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    Open the browser menu or share menu and choose “Add to Home screen”.
+                                    Open the browser menu or share menu and choose "Add to Home screen".
                                 </Typography>
                             </>
                         )}

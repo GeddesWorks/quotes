@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="QuoteDump">
+  <defs>
+    <linearGradient id="qdPrimary" x1="12" y1="16" x2="30" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FD0C1" />
+      <stop offset="1" stop-color="#2FB67D" />
+    </linearGradient>
+    <linearGradient id="qdSecondary" x1="30" y1="20" x2="52" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D08B72" />
+      <stop offset="1" stop-color="#A95A44" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="#FFF8EE" />
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="none" stroke="#E6D8C8" />
+  <text x="11" y="43" fill="url(#qdPrimary)" font-family="Georgia, serif" font-size="34" font-style="italic" font-weight="700">Q</text>
+  <text x="33" y="45" fill="url(#qdSecondary)" font-family="Georgia, serif" font-size="31" font-style="italic" font-weight="700">D</text>
+</svg>
