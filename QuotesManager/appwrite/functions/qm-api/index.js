@@ -41,6 +41,12 @@ const normalizeAllowWords = (values) =>
       .map((value) => normalizeAllowWord(value))
       .filter((value) => /^[a-z0-9][a-z0-9'-]{0,31}$/.test(value))
   ).slice(0, 300);
+const normalizeFavoriteQuoteIds = (values) =>
+  unique(
+    (Array.isArray(values) ? values : [])
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+  ).slice(0, 500);
 
 const buildReadPermissions = (userIds) => unique(userIds).map((id) => Permission.read(Role.user(id)));
 const buildUpdatePermissions = (userIds) => unique(userIds).map((id) => Permission.update(Role.user(id)));
@@ -958,6 +964,27 @@ const updateQuoteText = async (databases, config, payload, actorId) => {
   return await databases.updateDocument(config.databaseId, config.collections.quotes, quoteId, updates);
 };
 
+const updateMembershipFavorites = async (databases, config, payload, actorId) => {
+  const groupId = String(payload.groupId || "").trim();
+  if (!groupId) {
+    throw new Error("Group is required.");
+  }
+
+  const membership = await getMembershipByUser(databases, config, groupId, actorId);
+  if (!membership) {
+    throw new Error("Membership required.");
+  }
+
+  const favoriteQuoteIds = normalizeFavoriteQuoteIds(payload.favoriteQuoteIds);
+  const updated = await databases.updateDocument(
+    config.databaseId,
+    config.collections.memberships,
+    membership.$id,
+    { favoriteQuoteIds }
+  );
+  return { favoriteQuoteIds: updated.favoriteQuoteIds || [] };
+};
+
 const claimPlaceholder = async (databases, config, payload, actorId) => {
   const groupId = String(payload.groupId || "").trim();
   const placeholderId = String(payload.placeholderId || "").trim();
@@ -1297,6 +1324,7 @@ const handlers = {
   deleteQuoteSelf,
   setQuoteExcuse,
   updateQuoteText,
+  updateMembershipFavorites,
   removePerson,
   claimPlaceholder,
   unclaimPlaceholder,

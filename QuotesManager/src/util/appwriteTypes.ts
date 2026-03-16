@@ -18,6 +18,7 @@ export interface MembershipDoc extends Models.Document {
     personId?: string;
     claimedPlaceholderId?: string;
     claimedPlaceholderName?: string;
+    favoriteQuoteIds?: string[];
     createdAt: string;
 }
 

@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import QuoteDumpLogo from "../components/QuoteDumpLogo";
 import { useAuth } from "../contexts/AuthContext";
 import { setPendingInviteCode } from "../contexts/GroupContext";
 
@@ -57,12 +58,10 @@ const AuthPage = () => {
             <Card sx={{ maxWidth: 520, width: "100%" }} className="page">
                 <CardContent>
                     <Stack spacing={3}>
-                        <Box>
-                            <Typography variant="h4" gutterBottom>
-                                Quotes Manager 2.0
-                            </Typography>
+                        <Box textAlign="center">
+                            <QuoteDumpLogo size={64} />
                             <Typography variant="body1" color="text.secondary">
-                                Sign in to manage groups, invites, and the new Appwrite-powered quote flow.
+                                Sign in to manage groups, invites, and your shared quote archive.
                             </Typography>
                         </Box>
                         <Tabs

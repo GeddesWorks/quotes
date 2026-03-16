@@ -58,7 +58,7 @@ const ensureDatabase = async () => {
   }
 
   try {
-    await request("POST", "/databases", { databaseId, name: "Quotes Manager v2" });
+    await request("POST", "/databases", { databaseId, name: "QuoteDump" });
     console.log(`Created database ${databaseId}`);
   } catch (err) {
     if (err.status === 409) {
@@ -215,6 +215,7 @@ const setup = async () => {
     ensureAttribute(collections.memberships, "string", { key: "personId", size: 64, required: false, array: false }),
     ensureAttribute(collections.memberships, "string", { key: "claimedPlaceholderId", size: 64, required: false, array: false }),
     ensureAttribute(collections.memberships, "string", { key: "claimedPlaceholderName", size: 255, required: false, array: false }),
+    ensureAttribute(collections.memberships, "string", { key: "favoriteQuoteIds", size: 64, required: false, array: true }),
     ensureAttribute(collections.memberships, "string", { key: "createdAt", size: 64, required: true, array: false })
   );
 
@@ -264,6 +265,7 @@ const setup = async () => {
     "personId",
     "claimedPlaceholderId",
     "claimedPlaceholderName",
+    "favoriteQuoteIds",
     "createdAt"
   ]);
   await waitForAttributes(collections.people, [

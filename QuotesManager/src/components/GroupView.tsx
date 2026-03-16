@@ -14,6 +14,7 @@ import {
     InputLabel,
     MenuItem,
     Select,
+    Snackbar,
     Stack,
     Switch,
     TextField,
@@ -33,12 +34,13 @@ import {
     listGroupMembers,
     listPeople,
     listQuotes,
-    unclaimPlaceholder
+    unclaimPlaceholder,
+    updateMembershipFavorites
 } from "../util/appwriteApi";
 import type { MembershipDoc, PersonDoc, QuoteDoc } from "../util/appwriteTypes";
 import ActionButton from "./ActionButton";
 import LoadingState from "./LoadingState";
-import { CombinedView, CustomView, PeopleFirstView, QuoteWallView, TimelineView } from "./viewModes";
+import { CombinedView, CustomView, FavoritesView, PeopleFirstView, QuoteWallView, TimelineView } from "./viewModes";
 import { defaultModuleOrder, viewModules } from "./viewModules";
 import type { Layout, LayoutItem } from "react-grid-layout";
 
@@ -111,7 +113,26 @@ const readStoredArray = <T,>(key: string): T[] | null => {
     return null;
 };
 
+const normalizeFavoriteIds = (values: unknown): string[] =>
+    Array.from(
+        new Set(
+            (Array.isArray(values) ? values : [])
+                .map((value) => String(value || "").trim())
+                .filter(Boolean)
+        )
+    ).slice(0, 500);
+
+const filterFavoriteIds = (values: string[], validIds: Set<string>) =>
+    values.filter((id) => validIds.has(id));
+
+const stringListsEqual = (left: string[], right: string[]) =>
+    left.length === right.length && left.every((value, index) => value === right[index]);
+
 const moduleKeySet = new Set(viewModules.map((module) => module.key));
+const selectableDefaultModules = defaultModuleOrder.filter((key) => moduleKeySet.has(key));
+const fallbackModuleKey = moduleKeySet.has("stats")
+    ? "stats"
+    : selectableDefaultModules[0] ?? viewModules[0]?.key ?? "";
 const defaultItemSize = { w: 2, h: 2 };
 const moduleSizeOverrides: Record<string, { w: number; h: number; minW?: number; minH?: number }> = {
     spacer: { w: 1, h: 1 },
@@ -119,40 +140,136 @@ const moduleSizeOverrides: Record<string, { w: number; h: number; minW?: number;
     container: { w: 2, h: 2 }
 };
 
-const buildDefaultLayoutItem = (key: string, index: number, cols: number): LayoutItem => {
-    const size = moduleSizeOverrides[key] ?? defaultItemSize;
-    const w = Math.min(size.w, cols);
-    const minW = Math.min(size.minW ?? 1, cols);
+const isFiniteNumber = (value: unknown): value is number =>
+    typeof value === "number" && Number.isFinite(value);
+
+const ensureCustomModuleSelection = (modules: string[]) => {
+    const deduped: string[] = [];
+    modules.forEach((key) => {
+        if (!moduleKeySet.has(key)) {
+            return;
+        }
+        if (!deduped.includes(key)) {
+            deduped.push(key);
+        }
+    });
+    if (deduped.length > 0) {
+        return deduped;
+    }
+    if (fallbackModuleKey) {
+        return [fallbackModuleKey];
+    }
+    return [];
+};
+
+const buildDefaultLayout = (keys: string[], cols: number): Layout => {
+    const safeCols = Math.max(cols, 1);
+    let x = 0;
+    let y = 0;
+    let rowHeight = 1;
+    return keys.map((key) => {
+        const size = moduleSizeOverrides[key] ?? defaultItemSize;
+        const minW = Math.min(size.minW ?? 1, safeCols);
+        const minH = size.minH ?? 1;
+        const w = Math.min(Math.max(size.w, minW), safeCols);
+        const h = Math.max(size.h, minH);
+        if (x + w > safeCols) {
+            x = 0;
+            y += rowHeight;
+            rowHeight = 1;
+        }
+        const item: LayoutItem = {
+            i: key,
+            x,
+            y,
+            w,
+            h,
+            minW,
+            minH
+        };
+        x += w;
+        rowHeight = Math.max(rowHeight, h);
+        return item;
+    });
+};
+
+const sanitizeLayoutItemForCols = (item: LayoutItem, fallback: LayoutItem, cols: number): LayoutItem => {
+    const safeCols = Math.max(cols, 1);
+    const fallbackMinW = fallback.minW ?? 1;
+    const fallbackMinH = fallback.minH ?? 1;
+    const minW = Math.min(
+        Math.max(Math.round(isFiniteNumber(item.minW) ? item.minW : fallbackMinW), 1),
+        safeCols
+    );
+    const minH = Math.max(Math.round(isFiniteNumber(item.minH) ? item.minH : fallbackMinH), 1);
+    const w = Math.min(
+        Math.max(Math.round(isFiniteNumber(item.w) ? item.w : fallback.w), minW),
+        safeCols
+    );
+    const h = Math.max(Math.round(isFiniteNumber(item.h) ? item.h : fallback.h), minH);
+    const x = Math.min(
+        Math.max(Math.round(isFiniteNumber(item.x) ? item.x : fallback.x), 0),
+        Math.max(0, safeCols - w)
+    );
+    const y = Math.max(Math.round(isFiniteNumber(item.y) ? item.y : fallback.y), 0);
     return {
-        i: key,
-        x: (index * w) % cols,
-        y: Infinity,
+        ...fallback,
+        ...item,
+        i: fallback.i,
+        x,
+        y,
         w,
-        h: size.h,
+        h,
         minW,
-        minH: size.minH ?? 1
+        minH
     };
 };
 
 const normalizeLayoutForCols = (layout: Layout, cols: number): Layout =>
     layout.map((item) => {
-        const minW = Math.min(item.minW ?? 1, cols);
-        const minH = item.minH ?? 1;
-        const w = Math.min(item.w, cols);
-        const x = Math.min(item.x, Math.max(0, cols - w));
+        const safeCols = Math.max(cols, 1);
+        const minW = Math.min(
+            Math.max(Math.round(isFiniteNumber(item.minW) ? item.minW : 1), 1),
+            safeCols
+        );
+        const minH = Math.max(Math.round(isFiniteNumber(item.minH) ? item.minH : 1), 1);
+        const w = Math.min(
+            Math.max(Math.round(isFiniteNumber(item.w) ? item.w : minW), minW),
+            safeCols
+        );
+        const h = Math.max(Math.round(isFiniteNumber(item.h) ? item.h : minH), minH);
+        const x = Math.min(
+            Math.max(Math.round(isFiniteNumber(item.x) ? item.x : 0), 0),
+            Math.max(0, safeCols - w)
+        );
+        const y = Math.max(Math.round(isFiniteNumber(item.y) ? item.y : 0), 0);
         return {
             ...item,
             w,
+            h,
             x,
+            y,
             minW,
             minH
         };
     });
 
 const syncLayoutForModules = (layout: Layout, keys: string[], cols: number): Layout => {
-    const layoutMap = new Map(layout.map((item) => [item.i, item]));
-    const nextLayout = keys.map((key, index) => layoutMap.get(key) ?? buildDefaultLayoutItem(key, index, cols));
-    return normalizeLayoutForCols(nextLayout, cols);
+    const safeCols = Math.max(cols, 1);
+    const defaults = buildDefaultLayout(keys, safeCols);
+    const layoutMap = new Map(
+        layout
+            .filter((item): item is LayoutItem => Boolean(item) && typeof item.i === "string")
+            .map((item) => [item.i, item])
+    );
+    const nextLayout = defaults.map((fallback) => {
+        const existing = layoutMap.get(fallback.i);
+        if (!existing) {
+            return fallback;
+        }
+        return sanitizeLayoutItemForCols(existing, fallback, safeCols);
+    });
+    return normalizeLayoutForCols(nextLayout, safeCols);
 };
 
 const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMembership }) => {
@@ -169,10 +286,6 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
     );
     const customGridKey = useMemo(
         () => `qm_custom_grid_${storagePrefix}_${groupId}`,
-        [groupId, storagePrefix]
-    );
-    const favoritesKey = useMemo(
-        () => `qm_favorites_${storagePrefix}_${groupId}`,
         [groupId, storagePrefix]
     );
     const recentlyViewedKey = useMemo(
@@ -198,18 +311,23 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
     const [viewMode, setViewMode] = useState("combined");
     const [moreOpen, setMoreOpen] = useState(false);
     const [customizeOpen, setCustomizeOpen] = useState(false);
-    const [customModules, setCustomModules] = useState<string[]>(defaultModuleOrder);
+    const [customModules, setCustomModules] = useState<string[]>(() =>
+        ensureCustomModuleSelection(defaultModuleOrder)
+    );
     const [customLayout, setCustomLayout] = useState<Layout>([]);
     const [gridCols, setGridCols] = useState(4);
     const [rowHeight, setRowHeight] = useState(160);
     const [isEditingLayout, setIsEditingLayout] = useState(false);
     const [flashKeys, setFlashKeys] = useState<string[]>([]);
     const [favorites, setFavorites] = useState<string[]>([]);
+    const [favoriteFeedback, setFavoriteFeedback] = useState<string | null>(null);
     const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
     const [kioskEnabled, setKioskEnabled] = useState(false);
     const [kioskViewMode, setKioskViewMode] = useState("combined");
     const stableLayoutRef = useRef<Layout>([]);
     const itemRefs = useRef(new Map<string, HTMLDivElement | null>());
+    const favoritesRef = useRef<string[]>([]);
+    const favoritesRequestIdRef = useRef(0);
 
     const loadAll = useCallback(async () => {
         setLoading(true);
@@ -236,12 +354,7 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
 
     useEffect(() => {
         const stored = readStoredList(customModulesKey);
-        if (stored) {
-            const filtered = stored.filter((key) => moduleKeySet.has(key));
-            setCustomModules(filtered);
-        } else {
-            setCustomModules(defaultModuleOrder);
-        }
+        setCustomModules(ensureCustomModuleSelection(stored ?? defaultModuleOrder));
     }, [customModulesKey]);
 
     useEffect(() => {
@@ -293,14 +406,8 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
 
 
     useEffect(() => {
-        const stored = readStoredList(favoritesKey);
-        setFavorites(stored ?? []);
-    }, [favoritesKey]);
-
-    useEffect(() => {
-        if (typeof window === "undefined") return;
-        window.localStorage.setItem(favoritesKey, JSON.stringify(favorites));
-    }, [favorites, favoritesKey]);
+        favoritesRef.current = favorites;
+    }, [favorites]);
 
     useEffect(() => {
         const stored = readStoredList(recentlyViewedKey);
@@ -313,12 +420,15 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
     }, [recentlyViewed, recentlyViewedKey]);
 
     useEffect(() => {
-        if (!quotes.length) {
-            return;
-        }
         const ids = new Set(quotes.map((quote) => quote.$id));
-        setFavorites((prev) => prev.filter((id) => ids.has(id)));
-        setRecentlyViewed((prev) => prev.filter((id) => ids.has(id)));
+        setFavorites((prev) => {
+            const filtered = filterFavoriteIds(prev, ids);
+            return stringListsEqual(prev, filtered) ? prev : filtered;
+        });
+        setRecentlyViewed((prev) => {
+            const filtered = prev.filter((id) => ids.has(id));
+            return stringListsEqual(prev, filtered) ? prev : filtered;
+        });
     }, [quotes]);
 
     const memberIds = useMemo(
@@ -342,6 +452,12 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
         () => members.find((member) => member.userId === currentMembership.userId) ?? currentMembership,
         [members, currentMembership]
     );
+
+    useEffect(() => {
+        const nextFavorites = normalizeFavoriteIds(currentMember.favoriteQuoteIds);
+        setFavorites((prev) => (stringListsEqual(prev, nextFavorites) ? prev : nextFavorites));
+    }, [currentMember.$id, currentMember.favoriteQuoteIds]);
+
     const hasClaimedPlaceholder = Boolean(currentMember.claimedPlaceholderId);
     const claimablePlaceholders = useMemo(() => {
         const joinedAt = Date.parse(currentMember.createdAt || "") || 0;
@@ -426,14 +542,94 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
         });
     }, [peopleMap, quotes, search]);
 
-    const toggleFavorite = useCallback((quoteId: string) => {
-        setFavorites((prev) => {
-            if (prev.includes(quoteId)) {
-                return prev.filter((id) => id !== quoteId);
-            }
-            return [quoteId, ...prev];
+    const setCurrentMemberFavoriteIds = useCallback(
+        (nextFavorites: string[]) => {
+            setMembers((prev) => {
+                let changed = false;
+                const nextMembers = prev.map((member) => {
+                    if (member.userId !== currentMembership.userId) {
+                        return member;
+                    }
+                    const normalized = normalizeFavoriteIds(member.favoriteQuoteIds);
+                    if (stringListsEqual(normalized, nextFavorites)) {
+                        return member;
+                    }
+                    changed = true;
+                    return { ...member, favoriteQuoteIds: nextFavorites };
+                });
+                return changed ? nextMembers : prev;
+            });
+        },
+        [currentMembership.userId]
+    );
+
+    const quoteLikeCounts = useMemo(() => {
+        const validQuoteIds = new Set(quotes.map((quote) => quote.$id));
+        const counts: Record<string, number> = {};
+        const seenUsers = new Set<string>();
+
+        members.forEach((member) => {
+            seenUsers.add(member.userId);
+            normalizeFavoriteIds(member.favoriteQuoteIds).forEach((quoteId) => {
+                if (!validQuoteIds.has(quoteId)) {
+                    return;
+                }
+                counts[quoteId] = (counts[quoteId] ?? 0) + 1;
+            });
         });
-    }, []);
+
+        if (!seenUsers.has(currentMembership.userId)) {
+            filterFavoriteIds(favorites, validQuoteIds).forEach((quoteId) => {
+                counts[quoteId] = (counts[quoteId] ?? 0) + 1;
+            });
+        }
+
+        return counts;
+    }, [currentMembership.userId, favorites, members, quotes]);
+
+    const toggleFavorite = useCallback(
+        (quoteId: string) => {
+            if (!currentMember.$id) {
+                return;
+            }
+
+            const prevFavorites = favoritesRef.current;
+            const nextFavorites = normalizeFavoriteIds(
+                prevFavorites.includes(quoteId)
+                    ? prevFavorites.filter((id) => id !== quoteId)
+                    : [quoteId, ...prevFavorites]
+            );
+            const removed = prevFavorites.includes(quoteId);
+            const requestId = favoritesRequestIdRef.current + 1;
+            favoritesRequestIdRef.current = requestId;
+
+            favoritesRef.current = nextFavorites;
+            setFavorites(nextFavorites);
+            setCurrentMemberFavoriteIds(nextFavorites);
+            setFavoriteFeedback(removed ? "Removed from favorites." : "Added to favorites.");
+
+            void updateMembershipFavorites(groupId, currentMember.$id, nextFavorites)
+                .then((result) => {
+                    if (requestId !== favoritesRequestIdRef.current) {
+                        return;
+                    }
+                    const persisted = normalizeFavoriteIds(result?.favoriteQuoteIds ?? nextFavorites);
+                    favoritesRef.current = persisted;
+                    setFavorites((prev) => (stringListsEqual(prev, persisted) ? prev : persisted));
+                    setCurrentMemberFavoriteIds(persisted);
+                })
+                .catch((err) => {
+                    if (requestId !== favoritesRequestIdRef.current) {
+                        return;
+                    }
+                    favoritesRef.current = prevFavorites;
+                    setFavorites((prev) => (stringListsEqual(prev, prevFavorites) ? prev : prevFavorites));
+                    setCurrentMemberFavoriteIds(prevFavorites);
+                    setError(err instanceof Error ? err.message : "Failed to update favorites.");
+                });
+        },
+        [currentMember.$id, groupId, setCurrentMemberFavoriteIds]
+    );
 
     const markViewed = useCallback((quoteId: string) => {
         setRecentlyViewed((prev) => {
@@ -474,9 +670,13 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
     const toggleModule = useCallback((key: string) => {
         setCustomModules((prev) => {
             if (prev.includes(key)) {
+                if (prev.length === 1) {
+                    setMessage("Custom view needs at least one module.");
+                    return prev;
+                }
                 return prev.filter((item) => item !== key);
             }
-            return [...prev, key];
+            return ensureCustomModuleSelection([...prev, key]);
         });
     }, []);
 
@@ -579,6 +779,20 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
         stableLayoutRef.current = initial;
     }, [customModules, gridCols]);
 
+    const resetCustomView = useCallback(() => {
+        const nextModules = ensureCustomModuleSelection(defaultModuleOrder);
+        const nextCols = 4;
+        const nextRowHeight = 160;
+        const initial = syncLayoutForModules([], nextModules, nextCols);
+        setCustomModules(nextModules);
+        setGridCols(nextCols);
+        setRowHeight(nextRowHeight);
+        setCustomLayout(initial);
+        stableLayoutRef.current = initial;
+        setIsEditingLayout(false);
+        setMessage("Custom view reset to defaults.");
+    }, []);
+
     const enterKiosk = useCallback(async () => {
         setMoreOpen(false);
         setCustomizeOpen(false);
@@ -639,6 +853,11 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
                 description: "Quotes grouped by date in a vertical feed."
             },
             {
+                key: "favorites",
+                label: "Favorites",
+                description: "Starred quotes in one place."
+            },
+            {
                 key: "people",
                 label: "People-first",
                 description: "Pick a person and explore their quotes."
@@ -661,7 +880,8 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
         quoteOfTheWeek,
         stats,
         search,
-        onSearchChange: setSearch
+        onSearchChange: setSearch,
+        quoteLikeCounts
     };
 
     const renderView = (mode: string) => {
@@ -697,6 +917,15 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
             case "timeline":
                 return (
                     <TimelineView
+                        {...baseViewProps}
+                        onQuoteSelect={markViewed}
+                        favorites={favorites}
+                        onToggleFavorite={toggleFavorite}
+                    />
+                );
+            case "favorites":
+                return (
+                    <FavoritesView
                         {...baseViewProps}
                         onQuoteSelect={markViewed}
                         favorites={favorites}
@@ -1096,6 +1325,9 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
                                         <Button variant="outlined" onClick={resetLayout}>
                                             Reset layout
                                         </Button>
+                                        <Button variant="outlined" color="secondary" onClick={resetCustomView}>
+                                            Reset view defaults
+                                        </Button>
                                     </Stack>
                                     <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                                         <FormControl size="small" fullWidth>
@@ -1165,6 +1397,17 @@ const GroupView: React.FC<GroupViewProps> = ({ groupId, groupName, currentMember
                     </Stack>
                 </Box>
             </Drawer>
+
+            <Snackbar
+                open={Boolean(favoriteFeedback)}
+                autoHideDuration={1800}
+                onClose={() => setFavoriteFeedback(null)}
+                anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+            >
+                <Alert onClose={() => setFavoriteFeedback(null)} severity="info" variant="filled">
+                    {favoriteFeedback}
+                </Alert>
+            </Snackbar>
 
             <Dialog open={addOpen} onClose={() => setAddOpen(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>Add a quote</DialogTitle>

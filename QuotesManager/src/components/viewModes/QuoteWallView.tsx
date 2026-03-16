@@ -42,6 +42,7 @@ const QuoteWallView: React.FC<ViewModeProps> = ({
         return (
             <IconButton
                 aria-label={isFavorite ? "Remove favorite" : "Add favorite"}
+                title={isFavorite ? "Unstar quote" : "Star quote"}
                 onClick={(event) => {
                     event.stopPropagation();
                     onToggleFavorite?.(quoteId);

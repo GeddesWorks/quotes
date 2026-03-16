@@ -36,6 +36,7 @@ Memberships
 - `personId` (string, optional)
 - `claimedPlaceholderId` (string, optional)
 - `claimedPlaceholderName` (string, optional)
+- `favoriteQuoteIds` (string[], optional)
 - `createdAt` (string ISO, required)
 
 People
